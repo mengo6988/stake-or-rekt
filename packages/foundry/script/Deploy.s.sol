@@ -2,24 +2,30 @@
 pragma solidity ^0.8.19;
 
 import "./DeployHelpers.s.sol";
-import { DeployYourContract } from "./DeployYourContract.s.sol";
+import {DeployYourContract} from "./DeployYourContract.s.sol";
+import {DeployBattleFactory} from "./DeployBattleFactory.s.sol";
+import {DeployDebugBattle} from "./DeployDebugBattle.s.sol";
+import {DeployTestBattle} from "./DeployTestBattle.s.sol";
 
 /**
  * @notice Main deployment script for all contracts
- * @dev Run this when you want to deploy multiple contracts at once
+ * @dev Uncomment/comment the deployment options as needed
  *
- * Example: yarn deploy # runs this script(without`--file` flag)
+ * Usage:
+ * yarn deploy
  */
 contract DeployScript is ScaffoldETHDeploy {
     function run() external {
-        // Deploys all your contracts sequentially
-        // Add new deployments here when needed
+        // Deploy only the BattleFactory
+        DeployBattleFactory deployBattleFactory = new DeployBattleFactory();
+        deployBattleFactory.run();
 
-        DeployYourContract deployYourContract = new DeployYourContract();
-        deployYourContract.run();
+        // Deploy a Battle directly
+        DeployDebugBattle deployDebugBattle = new DeployDebugBattle();
+        deployDebugBattle.run();
 
-        // Deploy another contract
-        // DeployMyContract myContract = new DeployMyContract();
-        // myContract.run();
+        // Deploy the full system (factory + battle through factory)
+        // DeployTestBattle deployTestBattle = new DeployTestBattle();
+        // deployTestBattle.run();
     }
 }
