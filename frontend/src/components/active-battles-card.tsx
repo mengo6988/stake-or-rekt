@@ -42,7 +42,7 @@ export default function ActiveBattlesCard() {
   );
 
   // Get status color
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "winning":
         return "text-green-500";
@@ -56,7 +56,7 @@ export default function ActiveBattlesCard() {
   };
 
   // Get status icon
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status: any) => {
     switch (status) {
       case "winning":
         return <ArrowRight className="h-4 w-4 text-green-500" />;
