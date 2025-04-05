@@ -3,13 +3,16 @@ import "@rainbow-me/rainbowkit/styles.css";
 import type { AppProps } from "next/app";
 import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-// import { config } from "@/config/wagmi";
-// import Layout from "@/layout/Layout";
-import { getDefaultConfig } from "@rainbow-me/rainbowkit";
-import { arbitrum, base, baseSepolia ,mainnet, optimism, polygon } from "wagmi/chains";
 import { WagmiProvider } from "wagmi";
 import { localBase } from "@/config/chains";
 import { config } from "@/config/wagmi";
+import { Kanit } from 'next/font/google';
+
+const kanit = Kanit({
+  subsets: ['latin'],
+  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+  variable: '--font-kanit'
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,9 +28,9 @@ export default function App({ Component, pageProps }: AppProps) {
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={config}>
         <RainbowKitProvider>
-          {/* <Layout> */}
+          <main className={`${kanit.variable}`}>
             <Component {...pageProps} />
-          {/* </Layout> */}
+          </main>
         </RainbowKitProvider>
       </WagmiProvider>
     </QueryClientProvider>
