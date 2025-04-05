@@ -101,10 +101,7 @@ contract Battle is Ownable {
      * @param tokenAPrice Price of tokenA.
      * @param tokenBPrice Price of tokenB.
      */
-    function resolveBattle(
-        uint256 tokenAPrice,
-        uint256 tokenBPrice
-    ) external onlyOwner {
+    function resolveBattle(uint256 tokenAPrice, uint256 tokenBPrice) external {
         require(
             block.timestamp >= battleStartTime + battleDuration,
             "Battle not yet ended"
@@ -136,7 +133,7 @@ contract Battle is Ownable {
     function forceResolveBattle(
         uint256 tokenAPrice,
         uint256 tokenBPrice
-    ) external onlyOwner {
+    ) external {
         require(!battleResolved, "Battle already resolved");
 
         uint256 tvlA = totalTokenAStaked * tokenAPrice;
@@ -155,6 +152,35 @@ contract Battle is Ownable {
 
         // Withdraw the losing tokens (if there is a winner)
         _withdrawLosingTokens();
+    }
+
+    /**
+     * @dev Mock swap function that simply withdraws all losing tokens to the owner.
+     * After calling this, the owner can use depositWinnings to simulate a swap.
+     * Requirements:
+     * - Battle must be resolved with a clear winner.
+     * - Can only be called by the owner.
+     */
+    function mockSwap() external {
+        require(battleResolved, "Battle not resolved yet");
+        require(winningToken != 0, "No winner; tie battle");
+        require(!winningsDeposited, "Winnings already deposited");
+
+        if (winningToken == 1) {
+            // TokenA wins, withdraw all tokenB
+            uint256 balanceB = tokenB.balanceOf(address(this));
+            if (balanceB > 0) {
+                // Transfer all losing tokens (tokenB) to owner
+                tokenB.transfer(owner(), balanceB);
+            }
+        } else if (winningToken == 2) {
+            // TokenB wins, withdraw all tokenA
+            uint256 balanceA = tokenA.balanceOf(address(this));
+            if (balanceA > 0) {
+                // Transfer all losing tokens (tokenA) to owner
+                tokenA.transfer(owner(), balanceA);
+            }
+        }
     }
 
     /**
@@ -189,7 +215,7 @@ contract Battle is Ownable {
      * - The owner must approve the contract to transfer the tokens.
      * @param amount The amount of tokens to deposit.
      */
-    function depositWinnings(uint256 amount) external onlyOwner {
+    function depositWinnings(uint256 amount) external {
         require(battleResolved, "Battle not resolved yet");
         require(winningToken != 0, "No winner; tie battle");
         require(!winningsDeposited, "Winnings already deposited");

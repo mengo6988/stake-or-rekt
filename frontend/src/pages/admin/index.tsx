@@ -467,46 +467,47 @@ const handleForceResolveBattle = () => {
   };
 
   const handleSwapTokens = async () => {
-    if (!walletClient || !swapData) {
-      const newSwapData = await fetchSwapData();
-      if (!newSwapData || !walletClient) {
-        toast.error("Swap data or wallet client not available");
-        return;
-      }
-
-      setSwapData(newSwapData);
-    }
-
-    try {
-      setIsSwapping(true);
-      toast.info("Executing swap...");
-
-      // Prepare transaction data for the 1inch router
-      const txData = {
-        to: ONE_INCH_ROUTER_ADDRESS,
-        data: swapData as `0x${string}`,
-        value: BigInt(0), // Set to 0 for ERC20 swaps
-      };
-
-      // Send the transaction
-      const hash = await walletClient.sendTransaction(txData);
-
-      // Track the transaction for success/failure
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-
-      if (receipt.status === "success") {
-        toast.success("Swap completed successfully!");
-        setIsSwapApproved(false);
-        setIsSwapping(false);
-      } else {
-        toast.error("Swap failed");
-        setIsSwapping(false);
-      }
-    } catch (error) {
-      console.error("Error executing swap:", error);
-      toast.error("Swap failed: " + (error as Error).message);
-      setIsSwapping(false);
-    }
+    
+    // if (!walletClient || !swapData) {
+    //   const newSwapData = await fetchSwapData();
+    //   if (!newSwapData || !walletClient) {
+    //     toast.error("Swap data or wallet client not available");
+    //     return;
+    //   }
+    //
+    //   setSwapData(newSwapData);
+    // }
+    //
+    // try {
+    //   setIsSwapping(true);
+    //   toast.info("Executing swap...");
+    //
+    //   // Prepare transaction data for the 1inch router
+    //   const txData = {
+    //     to: ONE_INCH_ROUTER_ADDRESS,
+    //     data: swapData as `0x${string}`,
+    //     value: BigInt(0), // Set to 0 for ERC20 swaps
+    //   };
+    //
+    //   // Send the transaction
+    //   const hash = await walletClient.sendTransaction(txData);
+    //
+    //   // Track the transaction for success/failure
+    //   const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    //
+    //   if (receipt.status === "success") {
+    //     toast.success("Swap completed successfully!");
+    //     setIsSwapApproved(false);
+    //     setIsSwapping(false);
+    //   } else {
+    //     toast.error("Swap failed");
+    //     setIsSwapping(false);
+    //   }
+    // } catch (error) {
+    //   console.error("Error executing swap:", error);
+    //   toast.error("Swap failed: " + (error as Error).message);
+    //   setIsSwapping(false);
+    // }
   };
 
   const handleManualTransfer = () => {

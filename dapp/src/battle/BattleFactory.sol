@@ -37,7 +37,7 @@ contract BattleFactory is Ownable {
         address tokenA,
         address tokenB,
         uint256 battleDuration
-    ) external onlyOwner returns (address) {
+    ) external returns (address) {
         require(tokenA != address(0), "Invalid tokenA address");
         require(tokenB != address(0), "Invalid tokenB address");
         require(tokenA != tokenB, "Tokens must be different");
