@@ -1,7 +1,20 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowUp, Medal } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowUp, Medal } from "lucide-react";
+
+// Function to get avatar src based on index
+const getAvatarSrc = (index: number) => {
+  // Cycle through the 4 avatars
+  const avatarNum = (index % 4) + 1;
+  return `/avatar${avatarNum}.svg`;
+};
 
 export function LeaderboardSection() {
   return (
@@ -46,10 +59,14 @@ export function LeaderboardSection() {
                 <div key={i} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={`/placeholder.svg?height=32&width=32`} alt={player.name} />
-                      <AvatarFallback>{player.name.substring(0, 2)}</AvatarFallback>
+                      <AvatarImage src={getAvatarSrc(i)} alt={player.name} />
+                      <AvatarFallback>
+                        {player.name.substring(0, 2)}
+                      </AvatarFallback>
                     </Avatar>
-                    <span className={player.highlight ? "font-medium" : ""}>{player.name}</span>
+                    <span className={player.highlight ? "font-medium" : ""}>
+                      {player.name}
+                    </span>
                   </div>
                   <span className="text-sm">{player.value}</span>
                 </div>
@@ -72,10 +89,17 @@ export function LeaderboardSection() {
                 <div key={i} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={`/placeholder.svg?height=32&width=32`} alt={player.name} />
-                      <AvatarFallback>{player.name.substring(0, 2)}</AvatarFallback>
+                      <AvatarImage
+                        src={getAvatarSrc(i + 3)}
+                        alt={player.name}
+                      />
+                      <AvatarFallback>
+                        {player.name.substring(0, 2)}
+                      </AvatarFallback>
                     </Avatar>
-                    <span className={player.highlight ? "font-medium" : ""}>{player.name}</span>
+                    <span className={player.highlight ? "font-medium" : ""}>
+                      {player.name}
+                    </span>
                   </div>
                   <span className="text-sm">{player.value}</span>
                 </div>
@@ -98,10 +122,17 @@ export function LeaderboardSection() {
                 <div key={i} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={`/placeholder.svg?height=32&width=32`} alt={player.name} />
-                      <AvatarFallback>{player.name.substring(0, 2)}</AvatarFallback>
+                      <AvatarImage
+                        src={getAvatarSrc(i + 6)}
+                        alt={player.name}
+                      />
+                      <AvatarFallback>
+                        {player.name.substring(0, 2)}
+                      </AvatarFallback>
                     </Avatar>
-                    <span className={player.highlight ? "font-medium" : ""}>{player.name}</span>
+                    <span className={player.highlight ? "font-medium" : ""}>
+                      {player.name}
+                    </span>
                   </div>
                   <span className="text-sm">{player.value}</span>
                 </div>
@@ -111,11 +142,11 @@ export function LeaderboardSection() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
 
 interface LeaderboardTableProps {
-  timeframe: string
+  timeframe: string;
 }
 
 function LeaderboardTable({ timeframe }: LeaderboardTableProps) {
@@ -175,7 +206,7 @@ function LeaderboardTable({ timeframe }: LeaderboardTableProps) {
       change: "+3",
       highlight: true,
     },
-  ]
+  ];
 
   return (
     <div className="rounded-md border">
@@ -188,16 +219,22 @@ function LeaderboardTable({ timeframe }: LeaderboardTableProps) {
         <div>Change</div>
       </div>
       <div className="divide-y">
-        {leaderboardData.map((player) => (
+        {leaderboardData.map((player, index) => (
           <div
             key={player.rank}
-            className={`grid grid-cols-7 gap-2 p-4 text-sm ${player.highlight ? "bg-muted/50" : ""}`}
+            className={`grid grid-cols-7 gap-2 p-4 text-sm ${
+              player.highlight ? "bg-[#BEA8E0A3]" : ""
+            }`}
           >
             <div className="flex items-center">
               {player.rank <= 3 ? (
                 <Medal
                   className={`h-5 w-5 mr-1 ${
-                    player.rank === 1 ? "text-yellow-500" : player.rank === 2 ? "text-gray-400" : "text-amber-700"
+                    player.rank === 1
+                      ? "text-yellow-500"
+                      : player.rank === 2
+                      ? "text-gray-400"
+                      : "text-amber-700"
                   }`}
                 />
               ) : (
@@ -206,17 +243,23 @@ function LeaderboardTable({ timeframe }: LeaderboardTableProps) {
             </div>
             <div className="col-span-2 flex items-center gap-2">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={`/placeholder.svg?height=32&width=32`} alt={player.name} />
+                <AvatarImage src={getAvatarSrc(index)} alt={player.name} />
                 <AvatarFallback>{player.name.substring(0, 2)}</AvatarFallback>
               </Avatar>
-              <span className={player.highlight ? "font-medium" : ""}>{player.name}</span>
+              <span className={player.highlight ? "font-medium" : ""}>
+                {player.name}
+              </span>
             </div>
             <div>{player.battles}</div>
             <div>{player.winRate}</div>
             <div>{player.tokensWon} TKNS</div>
             <div
               className={`flex items-center ${
-                player.change.startsWith("+") ? "text-green-500" : player.change.startsWith("-") ? "text-red-500" : ""
+                player.change.startsWith("+")
+                  ? "text-green-500"
+                  : player.change.startsWith("-")
+                  ? "text-red-500"
+                  : ""
               }`}
             >
               {player.change !== "0" && (
@@ -234,7 +277,5 @@ function LeaderboardTable({ timeframe }: LeaderboardTableProps) {
         ))}
       </div>
     </div>
-  )
+  );
 }
-
-
