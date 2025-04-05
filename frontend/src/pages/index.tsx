@@ -90,10 +90,10 @@ function PortfolioOverviewCard() {
   );
 
   return (
-    <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div className="rounded-lg bg-[#171725] text-white">
       <div className="p-6 flex flex-col space-y-3">
-        <h3 className="text-lg font-medium">Your Portfolio</h3>
-        <div className="text-3xl font-bold">
+        <h3 className="text-3xl font-bold">Your Portfolio</h3>
+        <div className="text-2xl font-semibold">
           ${totalUsdValue.toLocaleString()}
         </div>
         <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -115,9 +115,9 @@ function PortfolioOverviewCard() {
                 <div
                   className={`text-xs ${
                     token.change > 0
-                      ? "text-green-500"
+                      ? "text-[#1C922E]"
                       : token.change < 0
-                      ? "text-red-500"
+                      ? "text-[#921C1C]"
                       : "text-muted-foreground"
                   }`}
                 >
@@ -133,7 +133,7 @@ function PortfolioOverviewCard() {
             <div className="text-xs text-muted-foreground">Win Rate</div>
             <div className="text-lg font-medium">68%</div>
           </div>
-          <div className="rounded-md bg-primary/10 p-2">
+          <div className="rounded-md p-2">
             <div className="text-xs text-muted-foreground">Total Battles</div>
             <div className="text-lg font-medium">24</div>
           </div>
@@ -145,23 +145,23 @@ function PortfolioOverviewCard() {
 
 function BattleStatsCard() {
   return (
-    <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div className="rounded-lg bg-[#171725] text-white">
       <div className="p-6 flex flex-col space-y-2">
-        <h3 className="text-lg font-medium">Battle Stats</h3>
-        <div className="text-3xl font-bold">16 Wins</div>
-        <p className="text-sm text-muted-foreground">8 Losses</p>
+        <h3 className="text-3xl font-bold">Battle Stats</h3>
+        <div className="text-2xl font-semibold">16 Wins</div>
+        <p className="text-base text-muted-foreground">8 Losses</p>
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <div className="rounded-md bg-green-500/10 p-2">
-            <div className="text-xs text-muted-foreground">Winnings</div>
+          <div className="rounded-md bg-[#147022] p-2">
+            <div className="text-xs">Winnings</div>
             <div className="text-lg font-medium">+$2,480</div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs">
               Mixed tokens worth $2,480
             </div>
           </div>
-          <div className="rounded-md bg-red-500/10 p-2">
-            <div className="text-xs text-muted-foreground">Losses</div>
+          <div className="rounded-md bg-[#751717] p-2">
+            <div className="text-xs">Losses</div>
             <div className="text-lg font-medium">-$940</div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs">
               Mixed tokens worth $940
             </div>
           </div>
@@ -173,11 +173,11 @@ function BattleStatsCard() {
 
 function RewardsCard() {
   return (
-    <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div className="rounded-lg bg-[#171725] text-white">
       <div className="p-6 flex flex-col space-y-2">
-        <h3 className="text-lg font-medium">Global Battle Stats</h3>
-        <div className="text-3xl font-bold">$1.24M</div>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="text-3xl font-bold">Global Battle Stats</h3>
+        <div className="text-2xl font-semibold">$1.24M</div>
+        <p className="text-base text-muted-foreground">
           Total value currently in battles
         </p>
         <div className="mt-4 space-y-2">
