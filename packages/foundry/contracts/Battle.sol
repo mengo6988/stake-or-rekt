@@ -42,16 +42,12 @@ contract Battle is Ownable {
         address _tokenB,
         uint256 _battleDuration
     )
-        // uint256 _tokenAPrice,
-        // uint256 _tokenBPrice
         Ownable(msg.sender)
     {
         tokenA = IERC20(_tokenA);
         tokenB = IERC20(_tokenB);
         battleDuration = _battleDuration;
         battleStartTime = block.timestamp;
-        // tokenAPrice = _tokenAPrice;
-        // tokenBPrice = _tokenBPrice;
         battleResolved = false;
         winningToken = 0;
     }

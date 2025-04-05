@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     BattleFactory: {
-      address: "0x700b6a60ce7eaaea56f065753d8dcb9653dbad35",
+      address: "0x9a1ecf86a8c4de01dd654ecb3310981a8ba734b0",
       abi: [
         {
           type: "constructor",
@@ -257,11 +257,11 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deploymentFile: "run-1743822847.json",
+      deploymentFile: "run-1743824909.json",
       deploymentScript: "Deploy.s.sol",
     },
     MockERC20A: {
-      address: "0xa15bb66138824a1c7167f5e85b957d04dd34e468",
+      address: "0x13039d66ddc45825eb9e5ffcf858751df1076dc6",
       abi: [
         {
           type: "constructor",
@@ -730,11 +730,11 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deploymentFile: "run-1743822847.json",
+      deploymentFile: "run-1743824909.json",
       deploymentScript: "Deploy.s.sol",
     },
     MockERC20B: {
-      address: "0xb19b36b1456e65e3a6d514d3f715f204bd59f431",
+      address: "0x66ae42c5ce20f4981ef03d2d2a5d1f3318ca65fa",
       abi: [
         {
           type: "constructor",
@@ -1203,11 +1203,11 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deploymentFile: "run-1743822847.json",
+      deploymentFile: "run-1743824909.json",
       deploymentScript: "Deploy.s.sol",
     },
     Battle: {
-      address: "0xe1da8919f262ee86f9be05059c9280142cf23f48",
+      address: "0x3e7ec0a804e721bff6fe3fa628e19aa97d2e1c5c",
       abi: [
         {
           type: "constructor",
@@ -1616,7 +1616,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deploymentFile: "run-1743822847.json",
+      deploymentFile: "run-1743824909.json",
       deploymentScript: "Deploy.s.sol",
     },
   },
