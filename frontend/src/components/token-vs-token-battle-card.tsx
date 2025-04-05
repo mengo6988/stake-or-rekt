@@ -1,7 +1,14 @@
 "use client";
 
-import { useAccount, useReadContract } from "wagmi";
-import { formatEther } from "viem";
+import { useState, useMemo, useEffect } from "react";
+import {
+  useAccount,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
+import { parseEther, formatEther } from "viem";
+
 import { Battle } from "@/types/battle";
 import { Clock, Flame, Swords } from "lucide-react";
 import { Badge } from "./ui/badge";
@@ -14,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 // Import the necessary ABIs
 import { battleAbi } from "@/config/abi/Battle";
 import { extendedERC20ABI } from "@/config/abi/ERC20";
+import axios from "axios";
 
 // Function to get avatar src based on index
 const getAvatarSrc = (index: number) => {
@@ -34,6 +42,9 @@ export default function TokenVsTokenBattleCard({
   onJoinB,
 }: TokenVsTokenBattleCardProps) {
   const { address, isConnected } = useAccount();
+
+  const [tokenAPrice, setTokenAPrice] = useState(0);
+  const [tokenBPrice, setTokenBPrice] = useState(0);
 
   // Read user's token balances
   const { data: tokenABalance } = useReadContract({
@@ -86,19 +97,20 @@ export default function TokenVsTokenBattleCard({
   };
 
   // Dollar value calculation
-  const calculateDollarValue = (amount: number, symbol: string) => {
-    const prices: Record<string, number> = {
-      ETH: 3500,
-      BTC: 62000,
-      USDC: 1,
-      TKNS: 2.5,
-      SOL: 145,
-      DOGE: 0.15,
-      SHIB: 0.00002,
-      DAI: 1,
-    };
-
-    const price = prices[symbol] || 0;
+  const calculateDollarValue = (amount: number, symbol: string, price: number) => {
+    // const prices: Record<string, number> = {
+    //   ETH: 3500,
+    //   BTC: 62000,
+    //   USDC: 1,
+    //   TKNS: 2.5,
+    //   SOL: 145,
+    //   DOGE: 0.15,
+    //   SHIB: 0.00002,
+    //   DAI: 1,
+    // };
+    //
+    // const price = prices[symbol] || 0;
+    // return 69
     return (amount * price).toLocaleString("en-US", {
       style: "currency",
       currency: "USD",
@@ -169,7 +181,8 @@ export default function TokenVsTokenBattleCard({
               <div className="text-xs text-muted-foreground">
                 {calculateDollarValue(
                   battle.tokenA.totalStaked,
-                  battle.tokenA.symbol
+                  battle.tokenA.symbol,
+                  tokenAPrice,
                 )}
               </div>
             </div>
@@ -213,7 +226,8 @@ export default function TokenVsTokenBattleCard({
               <div className="text-xs text-muted-foreground">
                 {calculateDollarValue(
                   battle.tokenB.totalStaked,
-                  battle.tokenB.symbol
+                  battle.tokenB.symbol,
+                  tokenBPrice,
                 )}
               </div>
             </div>

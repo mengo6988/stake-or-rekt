@@ -1,26 +1,29 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import {
   parseEther,
   formatEther,
   formatUnits,
   type Address,
   parseUnits,
+  encodeFunctionData,
 } from "viem";
 import {
   useAccount,
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
+  usePublicClient,
+  useWalletClient,
 } from "wagmi";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import axios from "axios";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { useRouter } from "next/router";
+import { extendedERC20ABI } from "@/config/abi/ERC20";
+import axios from "axios";
 
 // Battle contract ABI
 const battleAbi = [
@@ -95,110 +98,21 @@ const battleAbi = [
   },
 ];
 
-// ERC20 ABI for approvals
-const erc20Abi = [
-  {
-    inputs: [
-      { name: "spender", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    name: "approve",
-    outputs: [{ name: "", type: "bool" }],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [{ name: "account", type: "address" }],
-    name: "balanceOf",
-    outputs: [{ name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "decimals",
-    outputs: [{ name: "", type: "uint8" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "symbol",
-    outputs: [{ name: "", type: "string" }],
-    stateMutability: "view",
-    type: "function",
-  },
-];
-
-// 1inch Router ABI (partial)
-const oneInchAbi = [
-  {
-    inputs: [
-      {
-        internalType: "contract IAggregationExecutor",
-        name: "executor",
-        type: "address",
-      },
-      {
-        components: [
-          {
-            internalType: "contract IERC20",
-            name: "srcToken",
-            type: "address",
-          },
-          {
-            internalType: "contract IERC20",
-            name: "dstToken",
-            type: "address",
-          },
-          {
-            internalType: "address payable",
-            name: "srcReceiver",
-            type: "address",
-          },
-          {
-            internalType: "address payable",
-            name: "dstReceiver",
-            type: "address",
-          },
-          { internalType: "uint256", name: "amount", type: "uint256" },
-          { internalType: "uint256", name: "minReturnAmount", type: "uint256" },
-          { internalType: "uint256", name: "flags", type: "uint256" },
-        ],
-        internalType: "struct GenericRouter.SwapDescription",
-        name: "desc",
-        type: "tuple",
-      },
-      { internalType: "bytes", name: "data", type: "bytes" },
-    ],
-    name: "swap",
-    outputs: [
-      { internalType: "uint256", name: "returnAmount", type: "uint256" },
-      { internalType: "uint256", name: "spentAmount", type: "uint256" },
-    ],
-    stateMutability: "payable",
-    type: "function",
-  },
-];
-
-const BATTLE_CONTRACT_ADDRESS = "0xYourBattleContractAddress" as Address; // Replace with actual address
 const ONE_INCH_ROUTER_ADDRESS =
-  "0x111111125421cA6dc452d289314280a0f8842A65" as Address; // Base Chain
+  "0x111111125421cA6dc452d289314280a0f8842A65" as Address;
 
 export default function BattleAdminPage() {
-
   const router = useRouter();
-
-  const {battleAddress} = router.query;
+  const { battleAddress } = router.query;
   const { address, isConnected } = useAccount();
+  const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
 
   // State variables
-  const [tokenAPrice, setTokenAPrice] = useState("");
-  const [tokenBPrice, setTokenBPrice] = useState("");
+  const [tokenAPrice, setTokenAPrice] = useState("1.5");
+  const [tokenBPrice, setTokenBPrice] = useState("2.0");
   const [depositAmount, setDepositAmount] = useState("");
   const [swapAmount, setSwapAmount] = useState("");
-  const [swapParams, setSwapParams] = useState<any>(null);
-  const [isLoadingSwapParams, setIsLoadingSwapParams] = useState(false);
   const [winningTokenSymbol, setWinningTokenSymbol] = useState("");
   const [losingTokenSymbol, setLosingTokenSymbol] = useState("");
   const [losingTokenAddress, setLosingTokenAddress] = useState<
@@ -208,16 +122,20 @@ export default function BattleAdminPage() {
     Address | undefined
   >();
   const [error, setError] = useState("");
+  const [isSwapApproved, setIsSwapApproved] = useState(false);
+  const [isManualSwapMode, setIsManualSwapMode] = useState(false);
+  const [swapData, setSwapData] = useState("");
+  const [isSwapping, setIsSwapping] = useState(false);
 
   // Read contract data
   const { data: battleResolved } = useReadContract({
-    address: BATTLE_CONTRACT_ADDRESS,
+    address: battleAddress as Address,
     abi: battleAbi,
     functionName: "battleResolved",
   }) as { data: boolean | undefined };
 
   const { data: winningTokenId } = useReadContract({
-    address: BATTLE_CONTRACT_ADDRESS,
+    address: battleAddress as Address,
     abi: battleAbi,
     functionName: "winningToken",
     query: {
@@ -226,25 +144,25 @@ export default function BattleAdminPage() {
   }) as { data: bigint | undefined };
 
   const { data: tokenAAddress } = useReadContract({
-    address: BATTLE_CONTRACT_ADDRESS,
+    address: battleAddress as Address,
     abi: battleAbi,
     functionName: "tokenA",
   }) as { data: Address | undefined };
 
   const { data: tokenBAddress } = useReadContract({
-    address: BATTLE_CONTRACT_ADDRESS,
+    address: battleAddress as Address,
     abi: battleAbi,
     functionName: "tokenB",
   }) as { data: Address | undefined };
 
   const { data: totalTokenAStaked } = useReadContract({
-    address: BATTLE_CONTRACT_ADDRESS,
+    address: battleAddress as Address,
     abi: battleAbi,
     functionName: "totalTokenAStaked",
   }) as { data: bigint | undefined };
 
   const { data: totalTokenBStaked } = useReadContract({
-    address: BATTLE_CONTRACT_ADDRESS,
+    address: battleAddress as Address,
     abi: battleAbi,
     functionName: "totalTokenBStaked",
   }) as { data: bigint | undefined };
@@ -252,7 +170,7 @@ export default function BattleAdminPage() {
   // Get token symbols
   const { data: tokenASymbol } = useReadContract({
     address: tokenAAddress as Address,
-    abi: erc20Abi,
+    abi: extendedERC20ABI,
     functionName: "symbol",
     query: {
       enabled: Boolean(tokenAAddress),
@@ -261,7 +179,7 @@ export default function BattleAdminPage() {
 
   const { data: tokenBSymbol } = useReadContract({
     address: tokenBAddress as Address,
-    abi: erc20Abi,
+    abi: extendedERC20ABI,
     functionName: "symbol",
     query: {
       enabled: Boolean(tokenBAddress),
@@ -271,7 +189,7 @@ export default function BattleAdminPage() {
   // Token balance
   const { data: losingTokenBalance } = useReadContract({
     address: losingTokenAddress,
-    abi: erc20Abi,
+    abi: extendedERC20ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
     query: {
@@ -279,9 +197,19 @@ export default function BattleAdminPage() {
     },
   }) as { data: bigint | undefined };
 
+  const { data: winningTokenBalance } = useReadContract({
+    address: winningTokenAddress,
+    abi: extendedERC20ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: {
+      enabled: Boolean(winningTokenAddress && address),
+    },
+  }) as { data: bigint | undefined };
+
   const { data: losingTokenDecimals } = useReadContract({
     address: losingTokenAddress,
-    abi: erc20Abi,
+    abi: extendedERC20ABI,
     functionName: "decimals",
     query: {
       enabled: Boolean(losingTokenAddress),
@@ -290,7 +218,7 @@ export default function BattleAdminPage() {
 
   const { data: winningTokenDecimals } = useReadContract({
     address: winningTokenAddress,
-    abi: erc20Abi,
+    abi: extendedERC20ABI,
     functionName: "decimals",
     query: {
       enabled: Boolean(winningTokenAddress),
@@ -299,60 +227,17 @@ export default function BattleAdminPage() {
 
   // Write contract hooks
   const {
-    writeContract: resolveBattleWrite,
-    data: resolveTxHash,
-    isPending: isResolvingBattle,
-    error: resolveError,
+    writeContract,
+    data: txHash,
+    isPending: isTransactionPending,
+    error: txError,
   } = useWriteContract();
 
-  const {
-    writeContract: forceResolveBattleWrite,
-    data: forceResolveTxHash,
-    isPending: isForceResolvingBattle,
-    error: forceResolveError,
-  } = useWriteContract();
-
-  const {
-    writeContract: depositWinningsWrite,
-    data: depositTxHash,
-    isPending: isDepositingWinnings,
-    error: depositError,
-  } = useWriteContract();
-
-  const {
-    writeContract: approveTokenWrite,
-    data: approveTxHash,
-    isPending: isApprovingToken,
-    error: approveError,
-  } = useWriteContract();
-
-  const {
-    writeContract: executeSwapWrite,
-    data: swapTxHash,
-    isPending: isSwapping,
-    error: swapError,
-  } = useWriteContract();
-
-  // Wait for transaction results
-  const { isSuccess: isResolveSuccess } = useWaitForTransactionReceipt({
-    hash: resolveTxHash,
-  });
-
-  const { isSuccess: isForceResolveSuccess } = useWaitForTransactionReceipt({
-    hash: forceResolveTxHash,
-  });
-
-  const { isSuccess: isDepositSuccess } = useWaitForTransactionReceipt({
-    hash: depositTxHash,
-  });
-
-  const { isSuccess: isApproveSuccess } = useWaitForTransactionReceipt({
-    hash: approveTxHash,
-  });
-
-  const { isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({
-    hash: swapTxHash,
-  });
+  // Wait for transaction receipt
+  const { isSuccess: isTransactionSuccess, isLoading: isWaitingForReceipt } =
+    useWaitForTransactionReceipt({
+      hash: txHash,
+    });
 
   // Update winning and losing tokens after battle resolution
   useEffect(() => {
@@ -383,260 +268,241 @@ export default function BattleAdminPage() {
     tokenBSymbol,
   ]);
 
-  useEffect(() => {
-    async function fetchTokenPrices(
-      tokenAAddress: string,
-      tokenBAddress: string,
-      chainId = "8453",
-    ) {
-      try {
-        const response = await axios.get("/api/get-token-prices", {
-          params: {
-            tokenAAddress,
-            tokenBAddress,
-            chainId,
-          },
-        });
-
-        const { tokenAPrice, tokenBPrice} = response.data;
-
-        console.log("Token A Price:", tokenAPrice);
-        console.log("Token B Price:", tokenBPrice);
-        setTokenAPrice(tokenAPrice)
-        setTokenBPrice(tokenBPrice)
-
-        return { tokenAPrice, tokenBPrice };
-      } catch (error: any) {
-        console.error(
-          "Error fetching prices:",
-          error?.response?.data?.error || error.message,
-        );
-        return null;
-      }
-    }
-
-    fetchTokenPrices("0xAC1Bd2486aAf3B5C0fc3Fd868558b082a531B2B4", "0x532f27101965dd16442E59d40670FaF5eBB142E4")
-  }, []);
-
   // Handle transaction results
   useEffect(() => {
-    if (isResolveSuccess) {
-      toast.success("Battle successfully resolved");
-    }
-    if (isForceResolveSuccess) {
-      toast.success("Battle forcefully resolved");
-    }
-    if (isDepositSuccess) {
-      toast.success("Winnings successfully deposited");
-      setDepositAmount("");
-    }
-    if (isApproveSuccess) {
-      toast.success("Token approval successful");
-      // If approval successful, proceed with swap
-      if (swapParams && address) {
-        executeSwapWrite({
-          address: swapParams.tx.to as Address,
-          abi: oneInchAbi,
-          functionName: "swap",
-          args: [
-            swapParams.tx.data.executor ||
-              "0x0000000000000000000000000000000000000000",
-            swapParams.tx.data.desc || {
-              srcToken: losingTokenAddress,
-              dstToken: winningTokenAddress,
-              srcReceiver: swapParams.tx.from,
-              dstReceiver: address,
-              amount: BigInt(swapParams.fromTokenAmount),
-              minReturnAmount: BigInt(swapParams.toTokenAmount),
-              flags: BigInt(0),
-            },
-            swapParams.tx.data.data || "0x",
-          ],
-          value: BigInt(swapParams.tx.value || 0),
-        });
+    if (isTransactionSuccess) {
+      toast.success("Transaction successful!");
+      // Reset swap approval status if it was a successful swap
+      if (isSwapping) {
+        setIsSwapApproved(false);
+        setIsSwapping(false);
       }
     }
-    if (isSwapSuccess) {
-      toast.success("Swap executed successfully");
-      setSwapAmount("");
-      setSwapParams(null);
-    }
-  }, [
-    isResolveSuccess,
-    isForceResolveSuccess,
-    isDepositSuccess,
-    isApproveSuccess,
-    isSwapSuccess,
-    swapParams,
-    address,
-    losingTokenAddress,
-    winningTokenAddress,
-    executeSwapWrite,
-  ]);
 
-  // Handle errors
-  useEffect(() => {
-    if (resolveError) setError(resolveError.message);
-    if (forceResolveError) setError(forceResolveError.message);
-    if (depositError) setError(depositError.message);
-    if (approveError) setError(approveError.message);
-    if (swapError) setError(swapError.message);
-  }, [resolveError, forceResolveError, depositError, approveError, swapError]);
+    if (txError) {
+      setError(txError.message);
+      toast.error("Transaction failed: " + txError.message);
+      if (isSwapping) {
+        setIsSwapping(false);
+      }
+    }
+  }, [isTransactionSuccess, txError, isSwapping]);
 
   // Handlers
-  const handleResolveBattle = async () => {
+  const handleResolveBattle = () => {
     if (!tokenAPrice || !tokenBPrice) {
       toast.error("Please provide both token prices");
       return;
     }
 
-    try {
-      resolveBattleWrite({
-        address: BATTLE_CONTRACT_ADDRESS,
-        abi: battleAbi,
-        functionName: "resolveBattle",
-        args: [parseEther(tokenAPrice), parseEther(tokenBPrice)],
-      });
-    } catch (error: any) {
-      console.error("Error resolving battle:", error);
-      setError(error.message || "Failed to resolve battle");
-    }
+    setError("");
+    writeContract({
+      address: battleAddress as Address,
+      abi: battleAbi,
+      functionName: "resolveBattle",
+      args: [parseEther(tokenAPrice), parseEther(tokenBPrice)],
+    });
   };
 
-  const handleForceResolveBattle = async () => {
+  const handleForceResolveBattle = () => {
     if (!tokenAPrice || !tokenBPrice) {
       toast.error("Please provide both token prices");
       return;
     }
 
-    try {
-      forceResolveBattleWrite({
-        address: BATTLE_CONTRACT_ADDRESS,
-        abi: battleAbi,
-        functionName: "forceResolveBattle",
-        args: [parseEther(tokenAPrice), parseEther(tokenBPrice)],
-      });
-    } catch (error: any) {
-      console.error("Error force resolving battle:", error);
-      setError(error.message || "Failed to force resolve battle");
-    }
+    setError("");
+    writeContract({
+      address: battleAddress as Address,
+      abi: battleAbi,
+      functionName: "forceResolveBattle",
+      args: [parseEther(tokenAPrice), parseEther(tokenBPrice)],
+    });
   };
 
-  const handleDepositWinnings = async () => {
+  const handleDepositWinnings = () => {
     if (!depositAmount) {
       toast.error("Please provide a deposit amount");
       return;
     }
 
+    setError("");
+    writeContract({
+      address: battleAddress as Address,
+      abi: battleAbi,
+      functionName: "depositWinnings",
+      args: [parseEther(depositAmount)],
+    });
+  };
+
+  // Fetch token prices from API endpoint
+  useEffect(() => {
+    const fetchTokenPrice = async () => {
+      if (!tokenAAddress || !tokenBAddress) return;
+      
+      try {
+        const response = await axios.get("/api/get-token-prices", {
+          params: {
+            tokenAAddress,
+            tokenBAddress,
+          },
+        });
+
+        const { tokenAPrice, tokenBPrice } = response.data;
+
+        setTokenAPrice(tokenAPrice);
+        setTokenBPrice(tokenBPrice);
+      } catch (error) {
+        console.error("Error fetching token prices:", error);
+      }
+    };
+    
+    fetchTokenPrice();
+  }, [tokenAAddress, tokenBAddress]);
+
+  // Get swap data from 1inch API
+  const fetchSwapData = async () => {
+    if (
+      !losingTokenAddress ||
+      !winningTokenAddress ||
+      !swapAmount ||
+      !losingTokenDecimals ||
+      !address
+    ) {
+      toast.error("Missing required data for swap");
+      return;
+    }
+
     try {
-      depositWinningsWrite({
-        address: BATTLE_CONTRACT_ADDRESS,
-        abi: battleAbi,
-        functionName: "depositWinnings",
-        args: [parseEther(depositAmount)],
+      toast.info("Fetching swap data from 1inch API...");
+      
+      // Calculate amount with proper decimals
+      const fromTokenAmount = parseUnits(swapAmount, losingTokenDecimals).toString();
+      
+      // Call your backend API to get the swap data
+      const response = await axios.get("/api/get-swap-data", {
+        params: {
+          fromTokenAddress: losingTokenAddress,
+          toTokenAddress: winningTokenAddress,
+          fromTokenAmount,
+          fromAddress: address,
+        },
       });
-    } catch (error: any) {
-      console.error("Error depositing winnings:", error);
-      setError(error.message || "Failed to deposit winnings");
+      console.log("READSPONSE: ", response.data)
+
+      // Get the tx data from the response
+      const { tx } = response.data;
+      
+      if (tx && tx.data) {
+        setSwapData(tx.data);
+        toast.success("Swap data fetched successfully");
+        return tx.data;
+      } else {
+        throw new Error("Invalid swap data received");
+      }
+    } catch (error) {
+      console.error("Error fetching swap data:", error);
+      toast.error("Failed to fetch swap data: " + (error as Error).message);
+      return null;
     }
   };
 
-  const fetchSwapParams = async () => {
-    if (!swapAmount || !losingTokenAddress || !winningTokenAddress) {
+  const handleApproveTokens = () => {
+    if (!swapAmount || !losingTokenAddress || !address) {
       toast.error("Please provide swap amount and ensure battle is resolved");
       return;
     }
 
-    setIsLoadingSwapParams(true);
     setError("");
+    const decimals = losingTokenDecimals || 18;
+    const amountToSwap = parseUnits(swapAmount, decimals);
+
+    writeContract({
+      address: losingTokenAddress,
+      abi: extendedERC20ABI,
+      functionName: "approve",
+      args: [ONE_INCH_ROUTER_ADDRESS, amountToSwap],
+    });
+
+    setIsSwapApproved(true);
+    toast.success("Tokens approved for swapping");
+  };
+
+  const handleSwapTokens = async () => {
+    if (!walletClient || !swapData) {
+      const newSwapData = await fetchSwapData();
+      if (!newSwapData || !walletClient) {
+        toast.error("Swap data or wallet client not available");
+        return;
+      }
+      
+      setSwapData(newSwapData);
+    }
 
     try {
-      const decimals = losingTokenDecimals || 18;
-      const amount = parseUnits(swapAmount, Number(decimals)).toString();
+      setIsSwapping(true);
+      toast.info("Executing swap...");
+      
+      // Prepare transaction data for the 1inch router
+      const txData = {
+        to: ONE_INCH_ROUTER_ADDRESS,
+        data: swapData as `0x${string}`,
+        value: BigInt(0), // Set to 0 for ERC20 swaps
+      };
 
-      // Call your backend API to fetch swap parameters from 1inch
-      const response = await axios.post("/api/get-1inch-swap", {
-        fromTokenAddress: losingTokenAddress,
-        toTokenAddress: winningTokenAddress,
-        amount: amount,
-        fromAddress: address,
-      });
-
-      if (response.status >= 200 && response.status < 300) {
-        setSwapParams(response.data);
-        toast.success("Swap parameters fetched successfully");
+      // Send the transaction
+      const hash = await walletClient.sendTransaction(txData);
+      
+      // Track the transaction for success/failure
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      
+      if (receipt.status === "success") {
+        toast.success("Swap completed successfully!");
+        setIsSwapApproved(false);
+        setIsSwapping(false);
       } else {
-        throw new Error("Failed to fetch swap parameters");
+        toast.error("Swap failed");
+        setIsSwapping(false);
       }
-    } catch (error: any) {
-      console.error("Error fetching swap params:", error);
-      setError(error.message || "Failed to fetch swap parameters");
-      toast.error(error.message || "Failed to fetch swap parameters");
-    } finally {
-      setIsLoadingSwapParams(false);
+    } catch (error) {
+      console.error("Error executing swap:", error);
+      toast.error("Swap failed: " + (error as Error).message);
+      setIsSwapping(false);
     }
   };
 
-  // Define executeSwap with useCallback to avoid dependency issues in useEffect
-  const executeSwap = useCallback(async () => {
-    if (!swapParams || !losingTokenAddress) {
+  const handleManualTransfer = () => {
+    if (
+      !swapAmount ||
+      !losingTokenAddress ||
+      !winningTokenAddress ||
+      !address
+    ) {
+      toast.error("Please provide swap amount and ensure battle is resolved");
       return;
     }
 
-    try {
-      // First approve tokens to be spent by the 1inch router
-      approveTokenWrite({
-        address: losingTokenAddress as Address,
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [
-          ONE_INCH_ROUTER_ADDRESS,
-          BigInt(swapParams.tx.value || swapParams.fromTokenAmount),
-        ],
-      });
-    } catch (error: any) {
-      console.error("Error approving tokens:", error);
-      setError(error.message || "Failed to approve tokens");
-    }
-  }, [swapParams, losingTokenAddress, approveTokenWrite]);
+    setError("");
+    const decimals = losingTokenDecimals || 18;
+    const amountToSwap = parseUnits(swapAmount, decimals);
 
-  const handleSwap = async () => {
-    if (!swapParams) {
-      toast.error("Please fetch swap parameters first");
+    writeContract({
+      address: losingTokenAddress,
+      abi: extendedERC20ABI,
+      functionName: "transfer",
+      args: [winningTokenAddress, amountToSwap],
+    });
+
+    toast.success("Tokens transferred");
+  };
+
+  const handleUseForDeposit = () => {
+    if (!winningTokenBalance || winningTokenBalance <= BigInt(0)) {
+      toast.error("No tokens available to deposit");
       return;
     }
 
-    if (!isApproveSuccess && !approveTxHash) {
-      // If not yet approved, start the approval process
-      executeSwap();
-    } else {
-      // If already approved, execute the swap
-      try {
-        executeSwapWrite({
-          address: swapParams.tx.to as Address,
-          abi: oneInchAbi,
-          functionName: "swap",
-          args: [
-            swapParams.tx.data.executor ||
-              "0x0000000000000000000000000000000000000000",
-            swapParams.tx.data.desc || {
-              srcToken: losingTokenAddress,
-              dstToken: winningTokenAddress,
-              srcReceiver: swapParams.tx.from,
-              dstReceiver: address,
-              amount: BigInt(swapParams.fromTokenAmount),
-              minReturnAmount: BigInt(swapParams.toTokenAmount),
-              flags: BigInt(0),
-            },
-            swapParams.tx.data.data || "0x",
-          ],
-          value: BigInt(swapParams.tx.value || 0),
-        });
-      } catch (error: any) {
-        console.error("Error executing swap:", error);
-        setError(error.message || "Failed to execute swap");
-      }
-    }
+    const amountToDeposit = formatEther(winningTokenBalance);
+    setDepositAmount(amountToDeposit);
   };
 
   return (
@@ -659,7 +525,10 @@ export default function BattleAdminPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                  <p> <span className="font-semibold">Address: </span>{battleAddress} </p>
+                <p>
+                  <span className="font-semibold">Address: </span>
+                  {battleAddress}
+                </p>
                 <div>
                   <p className="font-semibold">
                     Status: {battleResolved ? "Resolved" : "In Progress"}
@@ -697,7 +566,9 @@ export default function BattleAdminPage() {
             <CardContent>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="tokenAPrice">Token A Price</Label>
+                  <Label htmlFor="tokenAPrice">
+                    {tokenASymbol || "Token A"} Price
+                  </Label>
                   <Input
                     id="tokenAPrice"
                     value={tokenAPrice}
@@ -707,7 +578,9 @@ export default function BattleAdminPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="tokenBPrice">Token B Price</Label>
+                  <Label htmlFor="tokenBPrice">
+                    {tokenBSymbol || "Token B"} Price
+                  </Label>
                   <Input
                     id="tokenBPrice"
                     value={tokenBPrice}
@@ -721,29 +594,151 @@ export default function BattleAdminPage() {
                     onClick={handleResolveBattle}
                     disabled={
                       !!battleResolved ||
-                      isResolvingBattle ||
+                      isTransactionPending ||
+                      isWaitingForReceipt ||
                       !tokenAPrice ||
                       !tokenBPrice
                     }
                   >
-                    {isResolvingBattle ? "Resolving..." : "Resolve Battle"}
+                    {isTransactionPending || isWaitingForReceipt
+                      ? "Processing..."
+                      : "Resolve Battle"}
                   </Button>
                   <Button
                     onClick={handleForceResolveBattle}
                     variant="outline"
                     disabled={
                       !!battleResolved ||
-                      isForceResolvingBattle ||
+                      isTransactionPending ||
+                      isWaitingForReceipt ||
                       !tokenAPrice ||
                       !tokenBPrice
                     }
                   >
-                    {isForceResolvingBattle ? "Forcing..." : "Force Resolve"}
+                    {isTransactionPending || isWaitingForReceipt
+                      ? "Processing..."
+                      : "Force Resolve"}
                   </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Direct Token Transfer Card */}
+          {battleResolved && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Token Transfer</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <p>Transfer losing tokens to winning tokens</p>
+                    <div className="flex items-center my-2">
+                      <input
+                        type="checkbox"
+                        id="manualMode"
+                        checked={isManualSwapMode}
+                        onChange={() => setIsManualSwapMode(!isManualSwapMode)}
+                        className="mr-2"
+                      />
+                      <Label htmlFor="manualMode">
+                        Use Manual Transfer Mode
+                      </Label>
+                    </div>
+                    {losingTokenBalance && losingTokenDecimals && (
+                      <p className="text-sm text-gray-500 mt-1">
+                        Available:{" "}
+                        {formatUnits(losingTokenBalance, losingTokenDecimals)}{" "}
+                        {losingTokenSymbol}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="swapAmount">
+                      Amount to Transfer ({losingTokenSymbol})
+                    </Label>
+                    <Input
+                      id="swapAmount"
+                      value={swapAmount}
+                      onChange={(e) => setSwapAmount(e.target.value)}
+                      placeholder="Enter Amount"
+                    />
+                  </div>
+
+                  {isManualSwapMode ? (
+                    <Button
+                      onClick={handleManualTransfer}
+                      disabled={
+                        !swapAmount ||
+                        isTransactionPending ||
+                        isWaitingForReceipt
+                      }
+                    >
+                      {isTransactionPending || isWaitingForReceipt
+                        ? "Processing..."
+                        : "Transfer Tokens"}
+                    </Button>
+                  ) : (
+                    <div className="space-y-2">
+                      <Button
+                        onClick={handleApproveTokens}
+                        disabled={
+                          !swapAmount ||
+                          isTransactionPending ||
+                          isWaitingForReceipt ||
+                          isSwapApproved
+                        }
+                      >
+                        {isTransactionPending || isWaitingForReceipt
+                          ? "Processing..."
+                          : isSwapApproved
+                            ? "Approved"
+                            : "Approve Tokens"}
+                      </Button>
+                      
+                      {isSwapApproved && (
+                        <Button
+                          onClick={handleSwapTokens}
+                          disabled={
+                            !swapAmount ||
+                            isTransactionPending ||
+                            isWaitingForReceipt ||
+                            isSwapping
+                          }
+                          className="ml-2"
+                        >
+                          {isTransactionPending || isWaitingForReceipt || isSwapping
+                            ? "Processing..."
+                            : "Swap Tokens"}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
+                  {winningTokenBalance && winningTokenBalance > BigInt(0) && (
+                    <div className="mt-4 p-4 bg-green-50 rounded-md">
+                      <p className="font-medium">Available Winning Tokens:</p>
+                      <p>
+                        {formatUnits(
+                          winningTokenBalance,
+                          winningTokenDecimals || 18,
+                        )}{" "}
+                        {winningTokenSymbol}
+                      </p>
+                      <Button
+                        className="mt-2"
+                        onClick={handleUseForDeposit}
+                        variant="outline"
+                      >
+                        Use for Deposit
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Deposit Winnings Card */}
           {battleResolved && (
@@ -766,80 +761,16 @@ export default function BattleAdminPage() {
                   </div>
                   <Button
                     onClick={handleDepositWinnings}
-                    disabled={isDepositingWinnings || !depositAmount}
+                    disabled={
+                      isTransactionPending ||
+                      isWaitingForReceipt ||
+                      !depositAmount
+                    }
                   >
-                    {isDepositingWinnings
-                      ? "Depositing..."
+                    {isTransactionPending || isWaitingForReceipt
+                      ? "Processing..."
                       : "Deposit Winnings"}
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* 1inch Swap Card */}
-          {battleResolved && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Swap Tokens (1inch)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <p>Convert losing tokens to winning tokens using 1inch</p>
-                    {losingTokenBalance && losingTokenDecimals && (
-                      <p className="text-sm text-gray-500 mt-1">
-                        You have:{" "}
-                        {formatUnits(
-                          losingTokenBalance,
-                          Number(losingTokenDecimals),
-                        )}{" "}
-                        {losingTokenSymbol}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="swapAmount">
-                      Amount to Swap ({losingTokenSymbol})
-                    </Label>
-                    <Input
-                      id="swapAmount"
-                      value={swapAmount}
-                      onChange={(e) => setSwapAmount(e.target.value)}
-                      placeholder="Enter Amount to Swap"
-                    />
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button
-                      onClick={fetchSwapParams}
-                      disabled={isLoadingSwapParams || !swapAmount}
-                      variant="outline"
-                    >
-                      {isLoadingSwapParams ? "Loading..." : "Get Swap Data"}
-                    </Button>
-                    <Button
-                      onClick={handleSwap}
-                      disabled={!swapParams || isApprovingToken || isSwapping}
-                    >
-                      {isApprovingToken
-                        ? "Approving..."
-                        : isSwapping
-                          ? "Swapping..."
-                          : "Swap"}
-                    </Button>
-                  </div>
-                  {swapParams && winningTokenDecimals !== undefined && (
-                    <div className="mt-4">
-                      <p className="text-sm">
-                        You will receive approximately:{" "}
-                        {formatUnits(
-                          BigInt(swapParams.toTokenAmount),
-                          winningTokenDecimals,
-                        )}{" "}
-                        {winningTokenSymbol}
-                      </p>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
