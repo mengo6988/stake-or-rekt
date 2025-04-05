@@ -18,7 +18,7 @@ export const base = {
 } as const satisfies Chain;
 
 export const baseSepolia = {
-  id: 84531,
+  id: 84532,
   name: "Base Sepolia",
   nativeCurrency: {
     decimals: 18,
