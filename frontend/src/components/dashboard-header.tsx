@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Bell, Menu, Trophy, Wallet } from "lucide-react"
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 export function DashboardHeader() {
   const [isConnected, setIsConnected] = useState(false)
@@ -52,6 +53,7 @@ export function DashboardHeader() {
               My Portfolio
             </Link>
           </nav>
+          <ConnectButton />
         </div>
         <div className="flex items-center gap-4">
           {isConnected ? (

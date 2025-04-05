@@ -2,12 +2,12 @@ import "@/styles/globals.css";
 import "@rainbow-me/rainbowkit/styles.css";
 import type { AppProps } from "next/app";
 import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
-import { WagmiProvider } from "@privy-io/wagmi";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import { config } from "@/config/wagmi";
-import Layout from "@/layout/Layout";
+// import { config } from "@/config/wagmi";
+// import Layout from "@/layout/Layout";
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { arbitrum, base, mainnet, optimism, polygon } from "wagmi/chains";
+import { WagmiProvider } from "wagmi";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,9 +30,9 @@ export default function App({ Component, pageProps }: AppProps) {
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={config}>
         <RainbowKitProvider>
-          <Layout>
+          {/* <Layout> */}
             <Component {...pageProps} />
-          </Layout>
+          {/* </Layout> */}
         </RainbowKitProvider>
       </WagmiProvider>
     </QueryClientProvider>
