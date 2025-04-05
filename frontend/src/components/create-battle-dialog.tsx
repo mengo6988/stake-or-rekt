@@ -135,10 +135,37 @@ export function CreateBattleDialog({
   // Get the created battle address from transaction receipt when confirmed
   useEffect(() => {
     const getBattleAddressFromTx = async () => {
+      console.log("Create Battle useEffect triggered");
+      console.log("isConfirmed:", isConfirmed);
+      console.log("txHash:", txHash);
+      console.log("onCreateBattle:", onCreateBattle);
+      console.log("tokenA:", tokenA);
+      console.log("tokenB:", tokenB);
+
       if (isConfirmed && txHash && onCreateBattle && tokenA && tokenB) {
         try {
+          // Attempt to get the battle address from the transaction receipt
+          const receipt = await (window as any).ethereum.request({
+            method: "eth_getTransactionReceipt",
+            params: [txHash],
+          });
+
+          console.log("Transaction Receipt:", receipt);
+
+          // Extract the battle address from the logs (assuming the first log contains the address)
+          const battleAddress = receipt.logs[0]?.address || "";
+
           const durationInSeconds = calculateDurationInSeconds();
-          onCreateBattle(tokenA, tokenB, durationInSeconds);
+
+          console.log("Calling onCreateBattle with:", {
+            tokenA,
+            tokenB,
+            durationInSeconds,
+            battleAddress,
+          });
+
+          // Call the callback with the battle address
+          onCreateBattle(tokenA, tokenB, durationInSeconds, battleAddress);
 
           toast.success("Battle created successfully!");
 
@@ -146,9 +173,9 @@ export function CreateBattleDialog({
           resetForm();
         } catch (err) {
           console.error("Error getting transaction receipt:", err);
-          toast.success("Battle created, but couldn't verify details");
+          toast.error("Failed to create battle. Please try again.");
 
-          // Still call callback and reset form on best effort
+          // Fallback with minimal information
           const durationInSeconds = calculateDurationInSeconds();
           onCreateBattle(tokenA, tokenB, durationInSeconds);
           resetForm();
@@ -156,8 +183,10 @@ export function CreateBattleDialog({
       }
     };
 
-    getBattleAddressFromTx();
-  }, [isConfirmed, txHash]);
+    if (isConfirmed) {
+      getBattleAddressFromTx();
+    }
+  }, [isConfirmed, txHash, onCreateBattle, tokenA, tokenB]);
 
   // Show errors via toast
   if (error || confirmError) {
