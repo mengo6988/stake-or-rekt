@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     BattleFactory: {
-      address: "0x9a1ecf86a8c4de01dd654ecb3310981a8ba734b0",
+      address: "0xf29b688131cd69a97ad6e68fc3fffdea797a62ad",
       abi: [
         {
           type: "constructor",
@@ -257,11 +257,11 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deploymentFile: "run-1743824909.json",
+      deploymentFile: "run-1743826191.json",
       deploymentScript: "Deploy.s.sol",
     },
     MockERC20A: {
-      address: "0x13039d66ddc45825eb9e5ffcf858751df1076dc6",
+      address: "0x31d3e183b9170d3a370400b1521e56d64da9c29e",
       abi: [
         {
           type: "constructor",
@@ -730,11 +730,11 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deploymentFile: "run-1743824909.json",
+      deploymentFile: "run-1743826191.json",
       deploymentScript: "Deploy.s.sol",
     },
     MockERC20B: {
-      address: "0x66ae42c5ce20f4981ef03d2d2a5d1f3318ca65fa",
+      address: "0x9ffdb2671a9237a27955a84842d56eccb455c680",
       abi: [
         {
           type: "constructor",
@@ -1203,11 +1203,11 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deploymentFile: "run-1743824909.json",
+      deploymentFile: "run-1743826191.json",
       deploymentScript: "Deploy.s.sol",
     },
     Battle: {
-      address: "0x3e7ec0a804e721bff6fe3fa628e19aa97d2e1c5c",
+      address: "0xc2e188993806b4d22d5caea2fac1f883034d0eb9",
       abi: [
         {
           type: "constructor",
@@ -1268,6 +1268,24 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "forceResolveBattle",
+          inputs: [
+            {
+              name: "tokenAPrice",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "tokenBPrice",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -1616,7 +1634,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deploymentFile: "run-1743824909.json",
+      deploymentFile: "run-1743826191.json",
       deploymentScript: "Deploy.s.sol",
     },
   },

@@ -41,9 +41,7 @@ contract Battle is Ownable {
         address _tokenA,
         address _tokenB,
         uint256 _battleDuration
-    )
-        Ownable(msg.sender)
-    {
+    ) Ownable(msg.sender) {
         tokenA = IERC20(_tokenA);
         tokenB = IERC20(_tokenB);
         battleDuration = _battleDuration;
@@ -183,5 +181,29 @@ contract Battle is Ownable {
         uint256 amount
     ) external onlyOwner {
         IERC20(token).transfer(user, amount);
+    }
+
+    /**
+     * @dev Force resolve the battle for testing purposes, bypassing the duration check
+     */
+    function forceResolveBattle(
+        uint256 tokenAPrice,
+        uint256 tokenBPrice
+    ) external onlyOwner {
+        require(!battleResolved, "Battle already resolved");
+
+        uint256 tvlA = totalTokenAStaked * tokenAPrice;
+        uint256 tvlB = totalTokenBStaked * tokenBPrice;
+
+        if (tvlA > tvlB) {
+            winningToken = 1; // tokenA wins
+        } else if (tvlB > tvlA) {
+            winningToken = 2; // tokenB wins
+        } else {
+            winningToken = 0; // It's a tie
+        }
+
+        battleResolved = true;
+        emit BattleResolved(winningToken, tvlA, tvlB);
     }
 }
