@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Bell, Menu, Trophy, Wallet } from "lucide-react"
+import { Bell, Icon, Menu, Trophy, Wallet } from "lucide-react"
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useRouter } from "next/router"
 import { cn } from "@/lib/utils"
@@ -50,7 +50,7 @@ export function DashboardHeader() {
         </div>
         <div className="flex items-center gap-4">
 
-          <ConnectButton />
+          <ConnectButton showBalance={false} chainStatus="icon"/>
           {/* {isConnected ? ( */}
           {/*   <> */}
           {/*     <Button variant="outline" size="sm" className="hidden md:flex gap-2"> */}

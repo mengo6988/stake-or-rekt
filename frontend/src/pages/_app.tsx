@@ -1,10 +1,9 @@
 import "@/styles/globals.css";
 import "@rainbow-me/rainbowkit/styles.css";
 import type { AppProps } from "next/app";
-import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
+import { RainbowKitProvider, darkTheme, midnightTheme } from "@rainbow-me/rainbowkit";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
-import { localBase } from "@/config/chains";
 import { config } from "@/config/wagmi";
 import { Kanit } from 'next/font/google';
 
@@ -27,7 +26,7 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={config}>
-        <RainbowKitProvider>
+        <RainbowKitProvider theme={midnightTheme()}>
           <main className={`${kanit.variable}`}>
             <Component {...pageProps} />
           </main>
