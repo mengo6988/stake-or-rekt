@@ -14,10 +14,14 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Bell, Menu, Trophy, Wallet } from "lucide-react"
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useRouter } from "next/router"
+import { cn } from "@/lib/utils"
 
 export function DashboardHeader() {
+  const router = useRouter()
   const [isConnected, setIsConnected] = useState(false)
 
+  const isBattle = router.pathname.startsWith("/active-battles");
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-12">
       <div className="w-full flex h-16 items-center justify-between">
@@ -28,29 +32,19 @@ export function DashboardHeader() {
           </Button>
           <Link href="/" className="flex items-center gap-2">
             <Trophy className="h-6 w-6 text-white" />
-            <span className="text-xl font-bold">TokenBattle</span>
+            <span className="text-xl font-bold">Stake-or-Rekt</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6 ml-6">
             <Link
               href="/"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className={cn("text-sm font-medium hover:text-foreground transition-colors", isBattle && "text-muted-foreground" )}
             >
-              Dashboard
+              Home
             </Link>
-            <Link href="/active-battles" className="text-sm font-medium hover:text-foreground transition-colors">
+            <Link href="/active-battles" 
+              className={cn("text-sm font-medium hover:text-foreground transition-colors", !isBattle && "text-muted-foreground" )}
+              >
               Active Battles
-            </Link>
-            <Link
-              href="#"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Leaderboard
-            </Link>
-            <Link
-              href="#"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              My Portfolio
             </Link>
           </nav>
         </div>

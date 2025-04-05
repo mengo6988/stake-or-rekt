@@ -15,32 +15,15 @@ export function BattlesSection() {
       <div className="flex flex-col md:flex-row gap-6">
         <Card className="flex-1">
           <CardHeader>
-            <CardTitle>Available Battles</CardTitle>
+            <CardTitle>My Battles</CardTitle>
             <CardDescription>Join existing battles or create your own</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="open" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="open">Open</TabsTrigger>
+            <Tabs defaultValue="active" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="active">Active</TabsTrigger>
                 <TabsTrigger value="completed">Completed</TabsTrigger>
               </TabsList>
-              <TabsContent value="open" className="space-y-4 pt-4">
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <BattleCard
-                      key={i}
-                      id={`B${i}00${i}`}
-                      creator={`Player${i}`}
-                      stake={100 * i}
-                      participants={i}
-                      maxParticipants={5}
-                      timeLeft={`${12 + i}h ${30 + i}m`}
-                      status="open"
-                    />
-                  ))}
-                </div>
-              </TabsContent>
               <TabsContent value="active" className="space-y-4 pt-4">
                 <div className="space-y-4">
                   {[4, 5].map((i) => (
@@ -76,98 +59,6 @@ export function BattlesSection() {
               </TabsContent>
             </Tabs>
           </CardContent>
-          <CardFooter>
-            <Button className="w-full">Create New Battle</Button>
-          </CardFooter>
-        </Card>
-
-        <Card className="flex-1">
-          <CardHeader>
-            <CardTitle>Create Battle</CardTitle>
-            <CardDescription>Set up a new PvP battle</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="battle-token">Token</Label>
-              <Select defaultValue="TKNS">
-                <SelectTrigger id="battle-token">
-                  <SelectValue placeholder="Select token" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="TKNS">TKNS</SelectItem>
-                  <SelectItem value="ETH">ETH</SelectItem>
-                  <SelectItem value="USDC">USDC</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <Label htmlFor="stake-amount">Stake Amount</Label>
-                <span className="text-sm text-muted-foreground">Available: 1,000 TKNS</span>
-              </div>
-              <div className="flex space-x-2">
-                <Input id="stake-amount" type="number" placeholder="0.0" defaultValue="100" />
-                <Button variant="outline" size="sm">
-                  MAX
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="max-participants">Max Participants</Label>
-              <Select defaultValue="5">
-                <SelectTrigger id="max-participants">
-                  <SelectValue placeholder="Select max participants" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2">2 players</SelectItem>
-                  <SelectItem value="5">5 players</SelectItem>
-                  <SelectItem value="10">10 players</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="duration">Battle Duration</Label>
-              <Select defaultValue="24">
-                <SelectTrigger id="duration">
-                  <SelectValue placeholder="Select duration" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="6">6 hours</SelectItem>
-                  <SelectItem value="12">12 hours</SelectItem>
-                  <SelectItem value="24">24 hours</SelectItem>
-                  <SelectItem value="48">48 hours</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="rounded-lg border p-4 space-y-3">
-              <h4 className="font-medium">Battle Summary</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Your Stake</span>
-                  <span>100 TKNS</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Max Total Pool</span>
-                  <span>500 TKNS</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Potential Reward</span>
-                  <span className="text-green-500">+400 TKNS</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Potential Loss</span>
-                  <span className="text-red-500">-100 TKNS</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full">Create Battle</Button>
-          </CardFooter>
         </Card>
       </div>
     </div>
@@ -181,7 +72,7 @@ interface BattleCardProps {
   participants: number
   maxParticipants: number
   timeLeft: string
-  status: "open" | "active" | "completed"
+  status: "active" | "completed"
   winner?: string
 }
 
@@ -192,7 +83,7 @@ function BattleCard({ id, creator, stake, participants, maxParticipants, timeLef
         <div>
           <div className="flex items-center gap-2">
             <h3 className="font-medium">{id}</h3>
-            <Badge variant={status === "open" ? "outline" : status === "active" ? "secondary" : "default"}>
+            <Badge variant={status === "active" ? "secondary" : "default"}>
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </Badge>
           </div>
@@ -230,9 +121,7 @@ function BattleCard({ id, creator, stake, participants, maxParticipants, timeLef
         )}
 
         <div className="pt-2">
-          {status === "open" ? (
-            <Button className="w-full">Join Battle</Button>
-          ) : status === "active" ? (
+          {status === "active" ? (
             <Button variant="outline" className="w-full">
               View Details
             </Button>
@@ -246,5 +135,3 @@ function BattleCard({ id, creator, stake, participants, maxParticipants, timeLef
     </div>
   )
 }
-
-
