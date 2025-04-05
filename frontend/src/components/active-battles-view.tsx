@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,12 +23,20 @@ import { Clock, Filter, ArrowUpDown, Search, Swords } from "lucide-react";
 import { Battle } from "@/types/battle";
 import TokenVsTokenBattleCard from "./token-vs-token-battle-card";
 import { BattleJoinDialog } from "@/components/battle-join-dialog";
-import { battles } from "@/data/battle";
 import { CreateBattleDialog } from "./create-battle-dialog";
 import { type Address } from "viem";
-import toast from "react-hot-toast";
+import { toast } from "react-hot-toast";
+import { useAccount, useReadContract } from "wagmi";
+import { readContract } from "wagmi/actions";
+import { readConfig } from "@/config/wagmi";
+
+// Import ABIs
+import { battleFactoryAbi } from "@/config/abi/BattleFactory";
+import { battleAbi } from "@/config/abi/Battle";
+import { extendedERC20ABI } from "@/config/abi/ERC20";
 
 export function ActiveBattlesView() {
+  const { address } = useAccount();
   const [sortBy, setSortBy] = useState("timeLeft");
   const [filterToken, setFilterToken] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -37,11 +45,217 @@ export function ActiveBattlesView() {
     "tokenA" | "tokenB" | null
   >(null);
   const [createBattle, setCreateBattle] = useState(false);
+  const [contractBattles, setContractBattles] = useState<Battle[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Get the factory address from environment variable
   const battleFactoryAddress =
     (process.env.NEXT_PUBLIC_BATTLE_FACTORY_ADDRESS as Address) ||
     ("0x0000000000000000000000000000000000000000" as Address);
+
+  // Read the battle count from the BattleFactory contract
+  const { data: battleCount } = useReadContract({
+    address: battleFactoryAddress,
+    abi: battleFactoryAbi,
+    functionName: "getBattleCount",
+  });
+
+  // Get all battle addresses
+  const { data: battleAddresses } = useReadContract({
+    address: battleFactoryAddress,
+    abi: battleFactoryAbi,
+    functionName: "getAllBattles",
+    query: {
+      enabled: Boolean(battleCount && Number(battleCount) > 0),
+    },
+  });
+
+  // Fetch battle details when we have battle addresses
+  useEffect(() => {
+    const fetchBattleDetails = async () => {
+      // Make sure battleAddresses is an array with length property
+      const addresses = battleAddresses as Address[] | undefined;
+      if (!addresses || addresses.length === 0) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const battles: Battle[] = [];
+
+        for (let i = 0; i < addresses.length; i++) {
+          const battleAddress = addresses[i];
+
+          // Read basic battle details using readContract directly
+          try {
+            // Get token addresses
+            const tokenAAddress = (await readContract(readConfig, {
+              address: battleAddress,
+              abi: battleAbi,
+              functionName: "tokenA",
+            })) as Address;
+
+            const tokenBAddress = (await readContract(readConfig, {
+              address: battleAddress,
+              abi: battleAbi,
+              functionName: "tokenB",
+            })) as Address;
+
+            // Get staked amounts
+            const totalTokenAStaked = (await readContract(readConfig, {
+              address: battleAddress,
+              abi: battleAbi,
+              functionName: "totalTokenAStaked",
+            })) as bigint;
+
+            const totalTokenBStaked = (await readContract(readConfig, {
+              address: battleAddress,
+              abi: battleAbi,
+              functionName: "totalTokenBStaked",
+            })) as bigint;
+
+            // Get battle timing info
+            const battleStartTime = (await readContract(readConfig, {
+              address: battleAddress,
+              abi: battleAbi,
+              functionName: "battleStartTime",
+            })) as bigint;
+
+            const battleDuration = (await readContract(readConfig, {
+              address: battleAddress,
+              abi: battleAbi,
+              functionName: "battleDuration",
+            })) as bigint;
+
+            const battleResolved = (await readContract(readConfig, {
+              address: battleAddress,
+              abi: battleAbi,
+              functionName: "battleResolved",
+            })) as boolean;
+
+            // Read token symbols
+            const tokenASymbol = (await readContract(readConfig, {
+              address: tokenAAddress,
+              abi: extendedERC20ABI,
+              functionName: "symbol",
+            })) as string;
+
+            const tokenBSymbol = (await readContract(readConfig, {
+              address: tokenBAddress,
+              abi: extendedERC20ABI,
+              functionName: "symbol",
+            })) as string;
+
+            // Calculate time left
+            const endTime = Number(battleStartTime) + Number(battleDuration);
+            const now = Math.floor(Date.now() / 1000);
+            const timeLeftInSeconds = Math.max(0, endTime - now);
+
+            // Format time left as "XXh YYm"
+            let timeLeft = "Ended";
+            if (!battleResolved && timeLeftInSeconds > 0) {
+              const hours = Math.floor(timeLeftInSeconds / 3600);
+              const minutes = Math.floor((timeLeftInSeconds % 3600) / 60);
+              timeLeft = `${hours}h ${minutes}m`;
+            }
+
+            // Calculate difficulty level based on total staked
+            // This is hardcoded logic since difficulty isn't part of the contract
+            let difficulty: "low" | "medium" | "high" | "extreme" = "low";
+            const totalStakedValue =
+              Number(totalTokenAStaked) + Number(totalTokenBStaked);
+            if (totalStakedValue > 1000) {
+              difficulty = "extreme";
+            } else if (totalStakedValue > 500) {
+              difficulty = "high";
+            } else if (totalStakedValue > 100) {
+              difficulty = "medium";
+            }
+
+            // Format the staked amounts - using basic formatting here
+            // In a real implementation, you might want to get token decimals from the contract
+            const formattedTokenAStaked = (
+              Number(totalTokenAStaked) / 1e18
+            ).toFixed(2);
+            const formattedTokenBStaked = (
+              Number(totalTokenBStaked) / 1e18
+            ).toFixed(2);
+
+            // Create a Battle object with the data we have
+            // Note: Some data like participants info is hardcoded as it's not stored on-chain
+            const battle: Battle = {
+              id: `B${i + 1}`,
+              address: battleAddress,
+              name: `${tokenASymbol} vs ${tokenBSymbol}`,
+              creator: "Unknown", // This is hardcoded as it's not easily available on-chain
+              timeLeft,
+              createdAt: "Unknown", // This is hardcoded as it's not easily available on-chain
+              difficulty,
+              tokenA: {
+                symbol: tokenASymbol,
+                stakeAmount: 0, // Hardcoded, as this is user-specific
+                totalStaked: Number(formattedTokenAStaked),
+                participants: 0, // Hardcoded, as this is not tracked on-chain
+                participants_list: [], // Hardcoded, as this is not tracked on-chain
+              },
+              tokenB: {
+                symbol: tokenBSymbol,
+                stakeAmount: 0, // Hardcoded, as this is user-specific
+                totalStaked: Number(formattedTokenBStaked),
+                participants: 0, // Hardcoded, as this is not tracked on-chain
+                participants_list: [], // Hardcoded, as this is not tracked on-chain
+              },
+              maxParticipantsPerSide: 5, // Hardcoded, as this is not tracked on-chain
+            };
+
+            // Add mock participant data since this is not stored on-chain
+            battle.tokenA.participants = Math.floor(Math.random() * 5) + 1;
+            battle.tokenB.participants = Math.floor(Math.random() * 5) + 1;
+
+            // Create mock participants
+            battle.tokenA.participants_list = Array.from(
+              { length: battle.tokenA.participants },
+              (_, j) => ({
+                name: `Player${j + 1}`,
+                avatar: "/placeholder.svg?height=32&width=32",
+                stake: battle.tokenA.totalStaked / battle.tokenA.participants,
+              })
+            );
+
+            battle.tokenB.participants_list = Array.from(
+              { length: battle.tokenB.participants },
+              (_, j) => ({
+                name: `Player${j + battle.tokenA.participants + 1}`,
+                avatar: "/placeholder.svg?height=32&width=32",
+                stake: battle.tokenB.totalStaked / battle.tokenB.participants,
+              })
+            );
+
+            battles.push(battle);
+          } catch (err) {
+            console.error(
+              `Error fetching details for battle ${battleAddress}:`,
+              err
+            );
+            continue; // Skip this battle and continue with the next one
+          }
+        }
+
+        setContractBattles(battles);
+      } catch (error) {
+        console.error("Error fetching battle details:", error);
+        toast.error("Failed to load battles from the blockchain");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (battleAddresses) {
+      fetchBattleDetails();
+    } else {
+      setIsLoading(false);
+    }
+  }, [battleAddresses]);
 
   // Calculate dollar value based on token price
   const calculateDollarValue = (amount: number, symbol: string) => {
@@ -79,7 +293,7 @@ export function ActiveBattlesView() {
 
     if (battleAddress) {
       console.log(`New battle deployed at: ${battleAddress}`);
-      // 1. Refresh the battles list
+      // 1. Refresh the battles list - we could add a refetch call here
       // 2. Highlight the new battle
       // 3. Show a more detailed success message
 
@@ -96,7 +310,7 @@ export function ActiveBattlesView() {
   };
 
   // Filter and sort battles
-  const filteredBattles = battles
+  const filteredBattles = (contractBattles.length > 0 ? contractBattles : [])
     .filter((battle) => {
       // Filter by token
       if (
@@ -110,7 +324,8 @@ export function ActiveBattlesView() {
       if (
         searchQuery &&
         !battle.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !battle.id.toLowerCase().includes(searchQuery.toLowerCase())
+        !battle.id.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !battle.address.toLowerCase().includes(searchQuery.toLowerCase())
       )
         return false;
 
@@ -120,7 +335,14 @@ export function ActiveBattlesView() {
       // Sort by selected criteria
       switch (sortBy) {
         case "timeLeft":
-          return Number.parseInt(a.timeLeft) - Number.parseInt(b.timeLeft);
+          // Convert timeLeft strings to seconds for comparison
+          const getSeconds = (timeStr: string) => {
+            if (timeStr === "Ended") return Infinity;
+            const match = timeStr.match(/(\d+)h\s+(\d+)m/);
+            if (!match) return Infinity;
+            return parseInt(match[1]) * 3600 + parseInt(match[2]) * 60;
+          };
+          return getSeconds(a.timeLeft) - getSeconds(b.timeLeft);
         case "totalStaked":
           const aTotalValue = a.tokenA.totalStaked + a.tokenB.totalStaked;
           const bTotalValue = b.tokenA.totalStaked + b.tokenB.totalStaked;
@@ -235,109 +457,137 @@ export function ActiveBattlesView() {
                 <TabsTrigger value="list">List View</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="grid" className="pt-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredBattles.map((battle) => (
-                    <TokenVsTokenBattleCard
-                      key={battle.id}
-                      battle={battle}
-                      onJoinA={() => handleJoinBattle(battle, "tokenA")}
-                      onJoinB={() => handleJoinBattle(battle, "tokenB")}
-                    />
-                  ))}
+              {isLoading ? (
+                <div className="py-20 text-center">
+                  <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">
+                    Loading battles from the blockchain...
+                  </p>
                 </div>
-              </TabsContent>
+              ) : filteredBattles.length === 0 ? (
+                <div className="py-20 text-center">
+                  <p className="text-muted-foreground">
+                    No battles found. Create a new battle to get started!
+                  </p>
+                  <Button
+                    onClick={() => setCreateBattle(true)}
+                    className="mt-4 gap-2"
+                  >
+                    <Swords className="h-4 w-4" />
+                    Create Battle
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <TabsContent value="grid" className="pt-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredBattles.map((battle) => (
+                        <TokenVsTokenBattleCard
+                          key={battle.id}
+                          battle={battle}
+                          onJoinA={() => handleJoinBattle(battle, "tokenA")}
+                          onJoinB={() => handleJoinBattle(battle, "tokenB")}
+                        />
+                      ))}
+                    </div>
+                  </TabsContent>
 
-              <TabsContent value="list" className="pt-2">
-                <div className="rounded-md border overflow-hidden">
-                  <div className="grid grid-cols-7 gap-2 p-3 text-sm font-medium bg-muted/50">
-                    <div>Battle</div>
-                    <div className="col-span-2">Details</div>
-                    <div className="col-span-2">Token A</div>
-                    <div className="col-span-2">Token B</div>
-                  </div>
-                  <div className="divide-y">
-                    {filteredBattles.map((battle) => (
-                      <div
-                        key={battle.id}
-                        className="grid grid-cols-7 gap-2 p-3 text-sm items-center"
-                      >
-                        <div className="font-medium">
-                          <div className="truncate" title={battle.id}>
-                            {formatAddress(battle.address)}
-                          </div>
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                            <Clock className="h-3 w-3" />
-                            {battle.timeLeft}
-                          </div>
-                        </div>
-                        <div className="col-span-2">
-                          <div>{battle.name}</div>
-                          <Badge
-                            variant={
-                              battle.difficulty === "low"
-                                ? "outline"
-                                : battle.difficulty === "medium"
-                                ? "secondary"
-                                : battle.difficulty === "high"
-                                ? "default"
-                                : "destructive"
-                            }
-                            className="mt-1"
-                          >
-                            {battle.difficulty.charAt(0).toUpperCase() +
-                              battle.difficulty.slice(1)}
-                          </Badge>
-                        </div>
-                        <div className="col-span-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="font-bold">
-                              {battle.tokenA.symbol}
-                            </Badge>
-                            <span>{battle.tokenA.totalStaked} staked</span>
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {calculateDollarValue(
-                              battle.tokenA.totalStaked,
-                              battle.tokenA.symbol
-                            )}
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="mt-1 w-full"
-                            onClick={() => handleJoinBattle(battle, "tokenA")}
-                          >
-                            Join {battle.tokenA.symbol}
-                          </Button>
-                        </div>
-                        <div className="col-span-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="font-bold">
-                              {battle.tokenB.symbol}
-                            </Badge>
-                            <span>{battle.tokenB.totalStaked} staked</span>
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {calculateDollarValue(
-                              battle.tokenB.totalStaked,
-                              battle.tokenB.symbol
-                            )}
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="mt-1 w-full"
-                            onClick={() => handleJoinBattle(battle, "tokenB")}
-                          >
-                            Join {battle.tokenB.symbol}
-                          </Button>
-                        </div>
+                  <TabsContent value="list" className="pt-2">
+                    <div className="rounded-md border overflow-hidden">
+                      <div className="grid grid-cols-7 gap-2 p-3 text-sm font-medium bg-muted/50">
+                        <div>Battle</div>
+                        <div className="col-span-2">Details</div>
+                        <div className="col-span-2">Token A</div>
+                        <div className="col-span-2">Token B</div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </TabsContent>
+                      <div className="divide-y">
+                        {filteredBattles.map((battle) => (
+                          <div
+                            key={battle.id}
+                            className="grid grid-cols-7 gap-2 p-3 text-sm items-center"
+                          >
+                            <div className="font-medium">
+                              <div className="truncate" title={battle.id}>
+                                {formatAddress(battle.address)}
+                              </div>
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                <Clock className="h-3 w-3" />
+                                {battle.timeLeft}
+                              </div>
+                            </div>
+                            <div className="col-span-2">
+                              <div>{battle.name}</div>
+                              <Badge
+                                variant={
+                                  battle.difficulty === "low"
+                                    ? "outline"
+                                    : battle.difficulty === "medium"
+                                    ? "secondary"
+                                    : battle.difficulty === "high"
+                                    ? "default"
+                                    : "destructive"
+                                }
+                                className="mt-1"
+                              >
+                                {battle.difficulty.charAt(0).toUpperCase() +
+                                  battle.difficulty.slice(1)}
+                              </Badge>
+                            </div>
+                            <div className="col-span-2">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="font-bold">
+                                  {battle.tokenA.symbol}
+                                </Badge>
+                                <span>{battle.tokenA.totalStaked} staked</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {calculateDollarValue(
+                                  battle.tokenA.totalStaked,
+                                  battle.tokenA.symbol
+                                )}
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="mt-1 w-full"
+                                onClick={() =>
+                                  handleJoinBattle(battle, "tokenA")
+                                }
+                              >
+                                Join {battle.tokenA.symbol}
+                              </Button>
+                            </div>
+                            <div className="col-span-2">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="font-bold">
+                                  {battle.tokenB.symbol}
+                                </Badge>
+                                <span>{battle.tokenB.totalStaked} staked</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {calculateDollarValue(
+                                  battle.tokenB.totalStaked,
+                                  battle.tokenB.symbol
+                                )}
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="mt-1 w-full"
+                                onClick={() =>
+                                  handleJoinBattle(battle, "tokenB")
+                                }
+                              >
+                                Join {battle.tokenB.symbol}
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </TabsContent>
+                </>
+              )}
             </Tabs>
           </div>
         </CardContent>
