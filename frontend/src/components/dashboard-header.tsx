@@ -23,7 +23,7 @@ export function DashboardHeader() {
 
   const isBattle = router.pathname.startsWith("/active-battles");
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-12">
+    <header className="top-0 z-50 w-full  px-12">
       <div className="w-full flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" className="md:hidden">
@@ -31,16 +31,9 @@ export function DashboardHeader() {
             <span className="sr-only">Toggle menu</span>
           </Button>
           <Link href="/" className="flex items-center gap-2">
-            <Trophy className="h-6 w-6 text-white" />
-            <span className="text-xl font-bold">Stake-or-Rekt</span>
+            <span className="text-4xl font-black">Stake-or-Rekt</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6 ml-6">
-            <Link
-              href="/"
-              className={cn("text-sm font-medium hover:text-foreground transition-colors", isBattle && "text-muted-foreground" )}
-            >
-              Home
-            </Link>
             <Link href="/active-battles" 
               className={cn("text-sm font-medium hover:text-foreground transition-colors", !isBattle && "text-muted-foreground" )}
               >

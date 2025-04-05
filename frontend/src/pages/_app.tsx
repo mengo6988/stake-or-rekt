@@ -26,7 +26,7 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={config}>
-        <RainbowKitProvider theme={midnightTheme()}>
+        <RainbowKitProvider theme={darkTheme()}>
           <main className={`${kanit.variable}`}>
             <Component {...pageProps} />
           </main>
