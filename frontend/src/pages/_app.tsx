@@ -61,5 +61,7 @@ export default function App({ Component, pageProps }: AppProps) {
           </SmartWalletsProvider>
       </WagmiProvider>
     </QueryClientProvider>
+
+    </PrivyProvider>
   );
 }

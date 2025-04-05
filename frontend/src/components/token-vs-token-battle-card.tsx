@@ -12,6 +12,7 @@ import { Button } from "./ui/button";
 import { TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { Tooltip } from "@radix-ui/react-tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import {toast} from "sonner";
 
 // Import the necessary ABIs
 import { battleAbi } from "@/config/abi/Battle";

@@ -130,11 +130,9 @@ export function BattleJoinDialog({
   });
 
   // Handle Stake Success/Error
-=======
-  // Fetch user tokens when dialog opens
   useEffect(() => {
     async function fetchUserTokens() {
-      if (!isConnected || !address || !open) return;
+      if (!address || !open) return;
 
       setIsLoadingTokens(true);
 
@@ -149,7 +147,7 @@ export function BattleJoinDialog({
     }
 
     fetchUserTokens();
-  }, [address, isConnected, open]);
+  }, [address, address, open]);
 
   // Update relevant token when selectedToken changes
   useEffect(() => {
@@ -171,7 +169,6 @@ export function BattleJoinDialog({
   }, [selectedToken, selectedBattle, userTokens]);
 
   // Handle Stake Success
->>>>>>> main
   useEffect(() => {
     if (isConfirmed) {
       toast.success("Successfully staked tokens!");
@@ -444,7 +441,6 @@ export function BattleJoinDialog({
                       MAX
                     </Button>
                   </div>
->>>>>>> main
 
                   <div className="flex justify-between items-center">
                     <Button
