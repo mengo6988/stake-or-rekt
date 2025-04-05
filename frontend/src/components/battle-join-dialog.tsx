@@ -80,7 +80,8 @@ export function BattleJoinDialog({
   const { writeContract: faucetTokenA } = useWriteContract();
   const { writeContract: faucetTokenB } = useWriteContract();
   const { writeContractAsync } = useWriteContract();
-  const { writeContract: stakeTokenWrite, data: stakeTxHash } = useWriteContract();
+  const { writeContract: stakeTokenWrite, data: stakeTxHash } =
+    useWriteContract();
 
   // Transaction Receipt
   const { isSuccess: isStakeSuccess } = useWaitForTransactionReceipt({
@@ -141,7 +142,7 @@ export function BattleJoinDialog({
 
   const handleFaucetClick = async () => {
     if (!selectedBattle || !selectedToken) return;
-    
+
     if (selectedToken === "tokenA") {
       faucetTokenA({
         address: selectedBattle.tokenA.address as Address,
@@ -264,7 +265,7 @@ export function BattleJoinDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] bg-background border-none max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px] bg-[#171725] text-white border-none max-h-[85vh] overflow-y-auto">
         <DialogHeader className="mb-1">
           <DialogTitle className="text-xl">
             Join Battle: {selectedBattle.name}
@@ -278,7 +279,7 @@ export function BattleJoinDialog({
         {selectedBattle && (
           <div className="space-y-3 py-1">
             {/* Choose Side Section */}
-            <div className="rounded-lg border p-3 bg-muted/10">
+            <div className="rounded-lg border p-3 bg-[#232333]">
               <h4 className="font-medium mb-2">Choose Your Side</h4>
 
               <RadioGroup
@@ -368,15 +369,19 @@ export function BattleJoinDialog({
                       onChange={(e) => setStakeAmount(e.target.value)}
                       className="flex-1"
                     />
-                    <Button variant="outline" size="sm" onClick={handleMaxClick}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleMaxClick}
+                    >
                       MAX
                     </Button>
                   </div>
-                  
+
                   <div className="flex justify-between items-center">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={handleFaucetClick}
                       className="h-8 px-2 text-xs"
                     >
@@ -391,12 +396,12 @@ export function BattleJoinDialog({
                 </div>
 
                 {/* Battle Summary */}
-                <div className="rounded-lg border p-3 space-y-2 bg-muted/10">
+                <div className="rounded-lg border p-3 space-y-2 bg-[#232333]">
                   <h4 className="font-medium flex items-center gap-2">
                     <Swords className="h-4 w-4" />
                     Battle Summary
                   </h4>
-                  
+
                   <div className="grid grid-cols-2 gap-1 text-sm">
                     <span className="text-muted-foreground">Your Stake</span>
                     <span className="text-right">
@@ -405,13 +410,17 @@ export function BattleJoinDialog({
                         ? selectedBattle.tokenA.symbol
                         : selectedBattle.tokenB.symbol}
                     </span>
-                  
-                    <span className="text-muted-foreground">Potential Reward</span>
+
+                    <span className="text-muted-foreground">
+                      Potential Reward
+                    </span>
                     <span className="text-right text-green-500">
                       +{calculatePotentialReward()} {opposingTokenSymbol}
                     </span>
-                  
-                    <span className="text-muted-foreground">Potential Loss</span>
+
+                    <span className="text-muted-foreground">
+                      Potential Loss
+                    </span>
                     <span className="text-right text-red-500">
                       -{stakeAmount || "0"}{" "}
                       {selectedToken === "tokenA"
@@ -422,9 +431,9 @@ export function BattleJoinDialog({
                 </div>
 
                 {/* Details Toggle */}
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setShowDetails(!showDetails)}
                   className="w-full text-muted-foreground"
                 >
@@ -499,7 +508,7 @@ export function BattleJoinDialog({
                             ? selectedBattle.tokenA.symbol
                             : selectedBattle.tokenB.symbol}
                         </span>
-                      
+
                         <span className="text-muted-foreground">
                           {"Opposing Team's Total"}
                         </span>
@@ -522,7 +531,8 @@ export function BattleJoinDialog({
                     {selectedToken === "tokenA"
                       ? selectedBattle.tokenA.symbol
                       : selectedBattle.tokenB.symbol}
-                    . If your team loses, your tokens will be distributed to winners.
+                    . If your team loses, your tokens will be distributed to
+                    winners.
                   </p>
                 </div>
               </>
@@ -534,16 +544,19 @@ export function BattleJoinDialog({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="hover:bg-red-500 hover:text-white"
+            className="hover:bg-red-500 hover:font-bold hover:border-black bg-[#171725]"
           >
             Cancel
           </Button>
           <Button
             onClick={handleStake}
             disabled={
-              !selectedToken || !stakeAmount || parseFloat(stakeAmount) <= 0 || !isConnected
+              !selectedToken ||
+              !stakeAmount ||
+              parseFloat(stakeAmount) <= 0 ||
+              !isConnected
             }
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            className="bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
           >
             Join Battle
           </Button>

@@ -179,7 +179,7 @@ export function CreateBattleDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] bg-background border-none">
+      <DialogContent className="sm:max-w-[500px] bg-[#171725] text-white border-none">
         <DialogHeader>
           <DialogTitle className="text-xl flex items-center gap-2">
             <Swords className="h-5 w-5" />
@@ -274,7 +274,7 @@ export function CreateBattleDialog({
           <Button
             variant="outline"
             onClick={handleClose}
-            className="hover:bg-red-500 hover:font-bold hover:border-black"
+            className="hover:bg-red-500 hover:font-bold hover:border-black bg-[#171725]"
             disabled={isPending || isConfirming}
           >
             Cancel
@@ -284,7 +284,7 @@ export function CreateBattleDialog({
               !isFormValid() || isPending || isConfirming || isConfirmed
             }
             onClick={handleCreateBattle}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            className="bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
           >
             {isPending || isConfirming ? (
               <>
