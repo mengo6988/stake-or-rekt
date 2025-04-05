@@ -1,4 +1,3 @@
-// pages/api/get-user-tokens.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
 

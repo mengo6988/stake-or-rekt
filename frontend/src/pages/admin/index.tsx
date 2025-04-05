@@ -640,7 +640,7 @@ export default function BattleAdminPage() {
   };
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-[#0E1015] to-[#2d0e59]">
       <DashboardHeader />
       <h1 className="text-3xl font-bold mb-6">Battle Admin Dashboard</h1>
 
