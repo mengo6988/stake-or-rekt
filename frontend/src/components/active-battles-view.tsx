@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -48,6 +48,9 @@ export function ActiveBattlesView() {
   const [contractBattles, setContractBattles] = useState<Battle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Add a key to force re-render of battles
+  const [battlesKey, setBattlesKey] = useState(0);
+
   // Get the factory address from environment variable
   const battleFactoryAddress =
     (process.env.NEXT_PUBLIC_BATTLE_FACTORY_ADDRESS as Address) ||
@@ -56,7 +59,7 @@ export function ActiveBattlesView() {
   console.log("BATTLE: ", battleFactoryAddress);
 
   // Read the battle count from the BattleFactory contract
-  const { data: battleCount } = useReadContract({
+  const { data: battleCount, refetch: refetchBattleCount } = useReadContract({
     address: battleFactoryAddress,
     abi: battleFactoryAbi,
     functionName: "getBattleCount",
@@ -65,14 +68,15 @@ export function ActiveBattlesView() {
   console.log("BATTLE: ", battleCount);
 
   // Get all battle addresses
-  const { data: battleAddresses } = useReadContract({
-    address: battleFactoryAddress,
-    abi: battleFactoryAbi,
-    functionName: "getAllBattles",
-    query: {
-      enabled: Boolean(battleCount && Number(battleCount) > 0),
-    },
-  });
+  const { data: battleAddresses, refetch: refetchBattleAddresses } =
+    useReadContract({
+      address: battleFactoryAddress,
+      abi: battleFactoryAbi,
+      functionName: "getAllBattles",
+      query: {
+        enabled: Boolean(battleCount && Number(battleCount) > 0),
+      },
+    });
 
   // Function to safely get token symbol with fallbacks
   const getTokenSymbol = async (tokenAddress: Address): Promise<string> => {
@@ -107,185 +111,186 @@ export function ActiveBattlesView() {
   };
 
   // Fetch battle details when we have battle addresses
-  useEffect(() => {
-    const fetchBattleDetails = async () => {
-      // Make sure battleAddresses is an array with length property
-      const addresses = battleAddresses as Address[] | undefined;
-      if (!addresses || addresses.length === 0) {
-        setIsLoading(false);
-        return;
-      }
+  const fetchBattleDetails = useCallback(async () => {
+    // Make sure battleAddresses is an array with length property
+    const addresses = battleAddresses as Address[] | undefined;
+    if (!addresses || addresses.length === 0) {
+      setIsLoading(false);
+      return;
+    }
 
-      try {
-        const battles: Battle[] = [];
+    try {
+      const battles: Battle[] = [];
 
-        for (let i = 0; i < addresses.length; i++) {
-          const battleAddress = addresses[i];
+      for (let i = 0; i < addresses.length; i++) {
+        const battleAddress = addresses[i];
 
-          // Read basic battle details using readContract directly
-          try {
-            // Get token addresses
-            const tokenAAddress = (await readContract(readConfig, {
-              address: battleAddress,
-              abi: battleAbi,
-              functionName: "tokenA",
-            })) as Address;
+        // Read basic battle details using readContract directly
+        try {
+          // Get token addresses
+          const tokenAAddress = (await readContract(readConfig, {
+            address: battleAddress,
+            abi: battleAbi,
+            functionName: "tokenA",
+          })) as Address;
 
-            const tokenBAddress = (await readContract(readConfig, {
-              address: battleAddress,
-              abi: battleAbi,
-              functionName: "tokenB",
-            })) as Address;
+          const tokenBAddress = (await readContract(readConfig, {
+            address: battleAddress,
+            abi: battleAbi,
+            functionName: "tokenB",
+          })) as Address;
 
-            // Get staked amounts
-            const totalTokenAStaked = (await readContract(readConfig, {
-              address: battleAddress,
-              abi: battleAbi,
-              functionName: "totalTokenAStaked",
-            })) as bigint;
+          // Get staked amounts
+          const totalTokenAStaked = (await readContract(readConfig, {
+            address: battleAddress,
+            abi: battleAbi,
+            functionName: "totalTokenAStaked",
+          })) as bigint;
 
-            const totalTokenBStaked = (await readContract(readConfig, {
-              address: battleAddress,
-              abi: battleAbi,
-              functionName: "totalTokenBStaked",
-            })) as bigint;
+          const totalTokenBStaked = (await readContract(readConfig, {
+            address: battleAddress,
+            abi: battleAbi,
+            functionName: "totalTokenBStaked",
+          })) as bigint;
 
-            // Get battle timing info
-            const battleStartTime = (await readContract(readConfig, {
-              address: battleAddress,
-              abi: battleAbi,
-              functionName: "battleStartTime",
-            })) as bigint;
+          // Get battle timing info
+          const battleStartTime = (await readContract(readConfig, {
+            address: battleAddress,
+            abi: battleAbi,
+            functionName: "battleStartTime",
+          })) as bigint;
 
-            const battleDuration = (await readContract(readConfig, {
-              address: battleAddress,
-              abi: battleAbi,
-              functionName: "battleDuration",
-            })) as bigint;
+          const battleDuration = (await readContract(readConfig, {
+            address: battleAddress,
+            abi: battleAbi,
+            functionName: "battleDuration",
+          })) as bigint;
 
-            const battleResolved = (await readContract(readConfig, {
-              address: battleAddress,
-              abi: battleAbi,
-              functionName: "battleResolved",
-            })) as boolean;
+          const battleResolved = (await readContract(readConfig, {
+            address: battleAddress,
+            abi: battleAbi,
+            functionName: "battleResolved",
+          })) as boolean;
 
-            // Read token symbols
-            const tokenASymbol = await getTokenSymbol(tokenAAddress);
+          // Read token symbols
+          const tokenASymbol = await getTokenSymbol(tokenAAddress);
 
-            const tokenBSymbol = await getTokenSymbol(tokenBAddress);
+          const tokenBSymbol = await getTokenSymbol(tokenBAddress);
 
-            // Calculate time left
-            const endTime = Number(battleStartTime) + Number(battleDuration);
-            const now = Math.floor(Date.now() / 1000);
-            const timeLeftInSeconds = Math.max(0, endTime - now);
+          // Calculate time left
+          const endTime = Number(battleStartTime) + Number(battleDuration);
+          const now = Math.floor(Date.now() / 1000);
+          const timeLeftInSeconds = Math.max(0, endTime - now);
 
-            // Format time left as "XXh YYm"
-            let timeLeft = "Ended";
-            if (!battleResolved && timeLeftInSeconds > 0) {
-              const hours = Math.floor(timeLeftInSeconds / 3600);
-              const minutes = Math.floor((timeLeftInSeconds % 3600) / 60);
-              timeLeft = `${hours}h ${minutes}m`;
-            }
-
-            // Calculate difficulty level based on total staked
-            // This is hardcoded logic since difficulty isn't part of the contract
-            let difficulty: "low" | "medium" | "high" | "extreme" = "low";
-            const totalStakedValue =
-              Number(totalTokenAStaked) + Number(totalTokenBStaked);
-            if (totalStakedValue > 1000) {
-              difficulty = "extreme";
-            } else if (totalStakedValue > 500) {
-              difficulty = "high";
-            } else if (totalStakedValue > 100) {
-              difficulty = "medium";
-            }
-
-            // Format the staked amounts - using basic formatting here
-            // In a real implementation, you might want to get token decimals from the contract
-            const formattedTokenAStaked = (
-              Number(totalTokenAStaked) / 1e18
-            ).toFixed(2);
-            const formattedTokenBStaked = (
-              Number(totalTokenBStaked) / 1e18
-            ).toFixed(2);
-
-            // Create a Battle object with the data we have
-            // Note: Some data like participants info is hardcoded as it's not stored on-chain
-            const battle: Battle = {
-              id: `B${i + 1}`,
-              address: battleAddress,
-              name: `${tokenASymbol} vs ${tokenBSymbol}`,
-              creator: "Unknown", // This is hardcoded as it's not easily available on-chain
-              timeLeft,
-              createdAt: "Unknown", // This is hardcoded as it's not easily available on-chain
-              difficulty,
-              tokenA: {
-                address: tokenAAddress,
-                symbol: tokenASymbol,
-                stakeAmount: 0, // Hardcoded, as this is user-specific
-                totalStaked: Number(formattedTokenAStaked),
-                participants: 0, // Hardcoded, as this is not tracked on-chain
-                participants_list: [], // Hardcoded, as this is not tracked on-chain
-              },
-              tokenB: {
-                address: tokenBAddress,
-                symbol: tokenBSymbol,
-                stakeAmount: 0, // Hardcoded, as this is user-specific
-                totalStaked: Number(formattedTokenBStaked),
-                participants: 0, // Hardcoded, as this is not tracked on-chain
-                participants_list: [], // Hardcoded, as this is not tracked on-chain
-              },
-              maxParticipantsPerSide: 5, // Hardcoded, as this is not tracked on-chain
-            };
-
-            // Add mock participant data since this is not stored on-chain
-            battle.tokenA.participants = Math.floor(Math.random() * 5) + 1;
-            battle.tokenB.participants = Math.floor(Math.random() * 5) + 1;
-
-            // Create mock participants
-            battle.tokenA.participants_list = Array.from(
-              { length: battle.tokenA.participants },
-              (_, j) => ({
-                name: `Player${j + 1}`,
-                avatar: "/placeholder.svg?height=32&width=32",
-                stake: battle.tokenA.totalStaked / battle.tokenA.participants,
-              })
-            );
-
-            battle.tokenB.participants_list = Array.from(
-              { length: battle.tokenB.participants },
-              (_, j) => ({
-                name: `Player${j + battle.tokenA.participants + 1}`,
-                avatar: "/placeholder.svg?height=32&width=32",
-                stake: battle.tokenB.totalStaked / battle.tokenB.participants,
-              })
-            );
-
-            battles.push(battle);
-          } catch (err) {
-            console.error(
-              `Error fetching details for battle ${battleAddress}:`,
-              err
-            );
-            continue; // Skip this battle and continue with the next one
+          // Format time left as "XXh YYm"
+          let timeLeft = "Ended";
+          if (!battleResolved && timeLeftInSeconds > 0) {
+            const hours = Math.floor(timeLeftInSeconds / 3600);
+            const minutes = Math.floor((timeLeftInSeconds % 3600) / 60);
+            timeLeft = `${hours}h ${minutes}m`;
           }
+
+          // Calculate difficulty level based on total staked
+          // This is hardcoded logic since difficulty isn't part of the contract
+          let difficulty: "low" | "medium" | "high" | "extreme" = "low";
+          const totalStakedValue =
+            Number(totalTokenAStaked) + Number(totalTokenBStaked);
+          if (totalStakedValue > 1000) {
+            difficulty = "extreme";
+          } else if (totalStakedValue > 500) {
+            difficulty = "high";
+          } else if (totalStakedValue > 100) {
+            difficulty = "medium";
+          }
+
+          // Format the staked amounts - using basic formatting here
+          // In a real implementation, you might want to get token decimals from the contract
+          const formattedTokenAStaked = (
+            Number(totalTokenAStaked) / 1e18
+          ).toFixed(2);
+          const formattedTokenBStaked = (
+            Number(totalTokenBStaked) / 1e18
+          ).toFixed(2);
+
+          // Create a Battle object with the data we have
+          // Note: Some data like participants info is hardcoded as it's not stored on-chain
+          const battle: Battle = {
+            id: `B${i + 1}`,
+            address: battleAddress,
+            name: `${tokenASymbol} vs ${tokenBSymbol}`,
+            creator: "Unknown", // This is hardcoded as it's not easily available on-chain
+            timeLeft,
+            createdAt: "Unknown", // This is hardcoded as it's not easily available on-chain
+            difficulty,
+            tokenA: {
+              address: tokenAAddress,
+              symbol: tokenASymbol,
+              stakeAmount: 0, // Hardcoded, as this is user-specific
+              totalStaked: Number(formattedTokenAStaked),
+              participants: 0, // Hardcoded, as this is not tracked on-chain
+              participants_list: [], // Hardcoded, as this is not tracked on-chain
+            },
+            tokenB: {
+              address: tokenBAddress,
+              symbol: tokenBSymbol,
+              stakeAmount: 0, // Hardcoded, as this is user-specific
+              totalStaked: Number(formattedTokenBStaked),
+              participants: 0, // Hardcoded, as this is not tracked on-chain
+              participants_list: [], // Hardcoded, as this is not tracked on-chain
+            },
+            maxParticipantsPerSide: 5, // Hardcoded, as this is not tracked on-chain
+          };
+
+          // Add mock participant data since this is not stored on-chain
+          battle.tokenA.participants = Math.floor(Math.random() * 5) + 1;
+          battle.tokenB.participants = Math.floor(Math.random() * 5) + 1;
+
+          // Create mock participants
+          battle.tokenA.participants_list = Array.from(
+            { length: battle.tokenA.participants },
+            (_, j) => ({
+              name: `Player${j + 1}`,
+              avatar: "/placeholder.svg?height=32&width=32",
+              stake: battle.tokenA.totalStaked / battle.tokenA.participants,
+            })
+          );
+
+          battle.tokenB.participants_list = Array.from(
+            { length: battle.tokenB.participants },
+            (_, j) => ({
+              name: `Player${j + battle.tokenA.participants + 1}`,
+              avatar: "/placeholder.svg?height=32&width=32",
+              stake: battle.tokenB.totalStaked / battle.tokenB.participants,
+            })
+          );
+
+          battles.push(battle);
+        } catch (err) {
+          console.error(
+            `Error fetching details for battle ${battleAddress}:`,
+            err
+          );
+          continue; // Skip this battle and continue with the next one
         }
-
-        setContractBattles(battles);
-      } catch (error) {
-        console.error("Error fetching battle details:", error);
-        toast.error("Failed to load battles from the blockchain");
-      } finally {
-        setIsLoading(false);
       }
-    };
 
+      setContractBattles(battles);
+    } catch (error) {
+      console.error("Error fetching battle details:", error);
+      toast.error("Failed to load battles from the blockchain");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [battleAddresses]);
+
+  // Refetch battles when addresses change
+  useEffect(() => {
     if (battleAddresses) {
       fetchBattleDetails();
     } else {
       setIsLoading(false);
     }
-  }, [battleAddresses]);
+  }, [battleAddresses, fetchBattleDetails]);
 
   // Calculate dollar value based on token price
   const calculateDollarValue = (amount: number, symbol: string) => {
@@ -317,17 +322,14 @@ export function ActiveBattlesView() {
     durationInSeconds: number,
     battleAddress?: string
   ) => {
-    console.log(
-      `Battle created between ${tokenA} and ${tokenB} for ${durationInSeconds}s`
-    );
+    // Close the create battle dialog
+    setCreateBattle(false);
 
     if (battleAddress) {
-      console.log(`New battle deployed at: ${battleAddress}`);
-      // 1. Refresh the battles list - we could add a refetch call here
-      // 2. Highlight the new battle
-      // 3. Show a more detailed success message
+      // Reload the page to ensure fresh data
+      window.location.reload();
 
-      // Example toast notification
+      // Success toast
       toast.success(
         <div>
           <div>Battle created successfully!</div>
@@ -411,23 +413,31 @@ export function ActiveBattlesView() {
         <CardHeader className="pb-3">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <CardTitle>Token vs Token Battles</CardTitle>
+              <CardTitle>Coin v Coin Battles</CardTitle>
               <CardDescription>
                 Join a side and stake your tokens to win the opposing tokens
               </CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
-              <Button variant="outline" size="sm" className="gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
+              >
                 <Filter className="h-4 w-4" />
                 Filters
               </Button>
-              <Button variant="outline" size="sm" className="gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
+              >
                 <ArrowUpDown className="h-4 w-4" />
                 Sort
               </Button>
               <Button
                 size="sm"
-                className="gap-1"
+                className="gap-1 bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
                 onClick={() => setCreateBattle(true)}
               >
                 <Swords className="h-4 w-4" />
@@ -489,7 +499,7 @@ export function ActiveBattlesView() {
 
               {isLoading ? (
                 <div className="py-20 text-center">
-                  <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <div className="animate-spin h-8 w-8 rounded-full mx-auto mb-4"></div>
                   <p className="text-muted-foreground">
                     Loading battles from the blockchain...
                   </p>
@@ -509,8 +519,11 @@ export function ActiveBattlesView() {
                 </div>
               ) : (
                 <>
-                  <TabsContent value="grid" className="pt-2">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <TabsContent value="grid">
+                    <div
+                      key={`grid-${battlesKey}`}
+                      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                    >
                       {filteredBattles.map((battle) => (
                         <TokenVsTokenBattleCard
                           key={battle.id}
@@ -523,8 +536,11 @@ export function ActiveBattlesView() {
                   </TabsContent>
 
                   <TabsContent value="list" className="pt-2">
-                    <div className="rounded-md border overflow-hidden">
-                      <div className="grid grid-cols-7 gap-2 p-3 text-sm font-medium bg-muted/50">
+                    <div
+                      key={`list-${battlesKey}`}
+                      className="rounded-md overflow-hidden"
+                    >
+                      <div className="grid grid-cols-7 gap-2 p-3 text-sm font-medium bg-[#232333]">
                         <div>Battle</div>
                         <div className="col-span-2">Details</div>
                         <div className="col-span-2">Token A</div>
@@ -579,12 +595,12 @@ export function ActiveBattlesView() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="mt-1 w-full"
+                                className="mt-1 w-full bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
                                 onClick={() =>
                                   handleJoinBattle(battle, "tokenA")
                                 }
                               >
-                                Join {battle.tokenA.symbol}
+                                Stake {battle.tokenA.symbol}
                               </Button>
                             </div>
                             <div className="col-span-2">
@@ -603,12 +619,12 @@ export function ActiveBattlesView() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="mt-1 w-full"
+                                className="mt-1 w-full bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
                                 onClick={() =>
                                   handleJoinBattle(battle, "tokenB")
                                 }
                               >
-                                Join {battle.tokenB.symbol}
+                                Stake {battle.tokenB.symbol}
                               </Button>
                             </div>
                           </div>

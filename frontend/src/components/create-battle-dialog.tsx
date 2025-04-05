@@ -62,7 +62,7 @@ export function CreateBattleDialog({
 
   // Debug logging
   useEffect(() => {
-    console.log("CreateBattleDialog State:", { 
+    console.log("CreateBattleDialog State:", {
       pendingBattleCreation,
       createBattleState: {
         isLoading: createBattle.isLoading,
@@ -75,11 +75,11 @@ export function CreateBattleDialog({
       }
     });
   }, [
-    pendingBattleCreation, 
-    createBattle.isLoading, 
-    createBattle.isSuccess, 
-    createBattle.error, 
-    isConfirmed, 
+    pendingBattleCreation,
+    createBattle.isLoading,
+    createBattle.isSuccess,
+    createBattle.error,
+    isConfirmed,
     createBattle.latestHash
   ]);
 
@@ -90,7 +90,7 @@ export function CreateBattleDialog({
       const timer = setTimeout(() => {
         createBattle.setLatestHash(undefined);
       }, 1000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [isConfirmed, createBattle.latestHash, createBattle.setLatestHash]);
@@ -110,7 +110,7 @@ export function CreateBattleDialog({
       toast.error("Please wait for the transaction to complete");
       return;
     }
-    
+
     resetForm();
     onOpenChange(false);
   };
@@ -156,7 +156,7 @@ export function CreateBattleDialog({
     try {
       // Convert duration to seconds based on selected unit
       const durationInSeconds = calculateDurationInSeconds();
-      
+
       // Mark as pending to handle callback after confirmation
       setPendingBattleCreation(true);
 
@@ -176,13 +176,55 @@ export function CreateBattleDialog({
 
   // Track transaction completion and call the callback
   useEffect(() => {
+    const getBattleAddressFromTx = async () => {
+      console.log("Create Battle useEffect triggered");
+      console.log("isConfirmed:", isConfirmed);
+      console.log("txHash:", txHash);
+      console.log("onCreateBattle:", onCreateBattle);
+      console.log("tokenA:", tokenA);
+      console.log("tokenB:", tokenB);
+
+      if (isConfirmed && txHash && onCreateBattle && tokenA && tokenB) {
+        try {
+          // Attempt to get the battle address from the transaction receipt
+          const receipt = await (window as any).ethereum.request({
+            method: "eth_getTransactionReceipt",
+            params: [txHash],
+          });
+
+          console.log("Transaction Receipt:", receipt);
+
+          // Extract the battle address from the logs (assuming the first log contains the address)
+          const battleAddress = receipt.logs[0]?.address || "";
+
+          const durationInSeconds = calculateDurationInSeconds();
+
+          console.log("Calling onCreateBattle with:", {
+            tokenA,
+            tokenB,
+            durationInSeconds,
+            battleAddress,
+          });
+
+          // Call the callback with the battle address
+          onCreateBattle(tokenA, tokenB, durationInSeconds, battleAddress);
+
+          toast.success("Battle created successfully!");
+
+          // Reset form after successful transaction
+          resetForm();
+        } catch (err) {
+          console.error("Error getting transaction receipt:", err);
+          toast.error("Failed to create battle. Please try again.");
+
+          // Fallback with minimal information
     if (isConfirmed && pendingBattleCreation && receipt && onCreateBattle) {
       try {
         const durationInSeconds = calculateDurationInSeconds();
-        
+
         // Extract battle address from logs if possible
         let battleAddress;
-        
+
         // If we have a receipt, try to extract the battle address from event logs
         if (receipt.logs && receipt.logs.length > 0) {
           // Look for BattleCreated event in logs
@@ -190,10 +232,10 @@ export function CreateBattleDialog({
           try {
             // Find the right log entry
             // This is just a placeholder - you'll need to implement this based on your contract's event structure
-            const battleCreatedEvent = receipt.logs.find(log => 
+            const battleCreatedEvent = receipt.logs.find(log =>
               log.topics && log.topics[0] === "0x..." // Your event signature hash
             );
-            
+
             if (battleCreatedEvent && battleCreatedEvent.data) {
               // Extract the battle address from the event data
               // Again, this is just an example
@@ -203,19 +245,19 @@ export function CreateBattleDialog({
             console.error("Error parsing event logs:", parseErr);
           }
         }
-        
+
         // Call the callback with the battle information
         onCreateBattle(tokenA, tokenB, durationInSeconds, battleAddress);
-        
+
         toast.success("Battle created successfully!");
-        
+
         // Reset form and close dialog after successful transaction
         resetForm();
         onOpenChange(false);
       } catch (err) {
         console.error("Error handling battle creation completion:", err);
         toast.success("Battle created, but couldn't verify details");
-        
+
         // Still call callback on best effort
         try {
           const durationInSeconds = calculateDurationInSeconds();
@@ -223,11 +265,11 @@ export function CreateBattleDialog({
         } catch (callbackErr) {
           console.error("Error in callback:", callbackErr);
         }
-        
+
         resetForm();
         onOpenChange(false);
       }
-      
+
       // Reset the pending state
       setPendingBattleCreation(false);
     }
@@ -255,7 +297,7 @@ export function CreateBattleDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] bg-background border-none">
+      <DialogContent className="sm:max-w-[500px] bg-[#171725] text-white border-none">
         <DialogHeader>
           <DialogTitle className="text-xl flex items-center gap-2">
             <Swords className="h-5 w-5" />
@@ -350,7 +392,7 @@ export function CreateBattleDialog({
           <Button
             variant="outline"
             onClick={handleClose}
-            className="hover:bg-red-500 hover:font-bold hover:border-black"
+            className="hover:bg-red-500 hover:font-bold hover:border-black bg-[#171725]"
             disabled={createBattle.isLoading}
           >
             Cancel
@@ -358,7 +400,7 @@ export function CreateBattleDialog({
           <Button
             disabled={!isFormValid() || createBattle.isLoading}
             onClick={handleCreateBattle}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            className="bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
           >
             {createBattle.isLoading ? (
               <>

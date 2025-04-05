@@ -1,36 +1,38 @@
 import { Swords, ArrowRight, Clock, Flame, Shield } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 // Mock data for user's active battles
 const userActiveBattles = [
   {
     id: "101",
-    name: "ETH vs USDC",
+    name: "BRETT vs TOSHI",
     joinedSide: "tokenA",
-    yourStake: { amount: 0.5, symbol: "ETH", usdValue: 1430 },
-    potentialReward: { amount: 1400, symbol: "USDC", usdValue: 1400 },
+    yourStake: { amount: 0.5, symbol: "BRETT", usdValue: 1430 },
+    potentialReward: { amount: 1400, symbol: "BRETT", usdValue: 1400 },
     endsIn: "11h 31m",
     status: "winning", // winning, losing, tied
-    teamSize: { yours: 3, opponent: 2 },
+    currentTVL: { yours: "$1430.20", opponent: "$1222.30" },
   },
   {
     id: "202",
-    name: "TKNS vs BTC",
+    name: "DEGEN vs PONKE",
     joinedSide: "tokenA",
-    yourStake: { amount: 500, symbol: "TKNS", usdValue: 450 },
-    potentialReward: { amount: 0.0075, symbol: "BTC", usdValue: 465 },
+    yourStake: { amount: 500, symbol: "DEGEN", usdValue: 450 },
+    potentialReward: { amount: 0.0075, symbol: "DEGEN", usdValue: 465 },
     endsIn: "12h 32m",
     status: "tied",
-    teamSize: { yours: 4, opponent: 4 },
+    currentTVL: { yours: "$630.20", opponent: "$630.20"  },
   },
   {
     id: "303",
-    name: "SOL vs DAI",
+    name: "DOGINME vs SKI",
     joinedSide: "tokenB",
-    yourStake: { amount: 200, symbol: "DAI", usdValue: 200 },
-    potentialReward: { amount: 2.5, symbol: "SOL", usdValue: 205 },
+    yourStake: { amount: 200, symbol: "DOGINME", usdValue: 200 },
+    potentialReward: { amount: 2.5, symbol: "DOGINME", usdValue: 205 },
     endsIn: "13h 33m",
     status: "losing",
-    teamSize: { yours: 4, opponent: 5 },
+    currentTVL: { yours: "$730.70", opponent: "$4534.60"  },
   },
 ];
 
@@ -38,7 +40,7 @@ export default function ActiveBattlesCard() {
   // Calculate total USD value at stake
   const totalStaked = userActiveBattles.reduce(
     (sum, battle) => sum + battle.yourStake.usdValue,
-    0,
+    0
   );
 
   // Get status color
@@ -70,13 +72,28 @@ export default function ActiveBattlesCard() {
   };
 
   return (
-    <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div className="rounded-lg bg-[#171725] text-white">
       <div className="p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium">Your Active Battles</h3>
-          <div className="text-sm">
-            <span className="text-muted-foreground">Total staked:</span>{" "}
-            <span className="font-medium">${totalStaked.toLocaleString()}</span>
+          <div className="flex items-center gap-4">
+            <div className="text-sm">
+              <span className="text-muted-foreground">Total staked:</span>{" "}
+              <span className="font-medium">
+                ${totalStaked.toLocaleString()}
+              </span>
+            </div>
+            {/* New Active Battles button */}
+            <Link href="/active-battles">
+              <Button
+                variant="outline"
+                className="bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
+                size="sm"
+              >
+                <Swords className="h-4 w-4" />
+                All Active Battles
+              </Button>
+            </Link>
           </div>
         </div>
 
@@ -84,11 +101,13 @@ export default function ActiveBattlesCard() {
           {userActiveBattles.map((battle) => (
             <div
               key={battle.id}
-              className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border/30"
+              className="flex items-center justify-between p-4 "
             >
               <div className="flex items-center gap-3">
                 <div
-                  className={`w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center ${getStatusColor(battle.status)}`}
+                  className={`w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center ${getStatusColor(
+                    battle.status
+                  )}`}
                 >
                   <Swords className="h-5 w-5" />
                 </div>
@@ -96,7 +115,13 @@ export default function ActiveBattlesCard() {
                   <div className="font-medium flex items-center gap-1">
                     {battle.name}
                     <span
-                      className={`text-xs px-2 py-0.5 rounded-full ${battle.status === "winning" ? "bg-green-100 text-green-800" : battle.status === "losing" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}`}
+                      className={`text-xs px-2 py-0.5 rounded-full ${
+                        battle.status === "winning"
+                          ? "bg-green-100 text-green-800"
+                          : battle.status === "losing"
+                          ? "bg-red-100 text-red-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }`}
                     >
                       {battle.status.charAt(0).toUpperCase() +
                         battle.status.slice(1)}
@@ -134,8 +159,8 @@ export default function ActiveBattlesCard() {
                   </span>
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Team size: {battle.teamSize.yours} vs{" "}
-                  {battle.teamSize.opponent}
+                  Current TVL: {battle.currentTVL.yours} vs{" "}
+                  {battle.currentTVL.opponent}
                 </div>
               </div>
             </div>
@@ -143,10 +168,11 @@ export default function ActiveBattlesCard() {
         </div>
 
         <div className="mt-4">
-          <button className="btn btn-sm btn-outline w-full gap-2">
-            <Swords className="h-4 w-4" />
+        <Link href="/active-battles">
+          <button className="btn btn-sm btn-outline w-full gap-2 cursor-pointer">
             Find more battles
           </button>
+          </Link>
         </div>
       </div>
     </div>

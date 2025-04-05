@@ -13,6 +13,13 @@ import { WagmiProvider } from "@privy-io/wagmi";
 import { config } from "@/config/wagmi";
 import { PrivyProvider } from "@privy-io/react-auth";
 import { SmartWalletsProvider } from "@privy-io/react-auth/smart-wallets";
+import { Kanit } from 'next/font/google';
+
+const kanit = Kanit({
+  subsets: ['latin'],
+  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+  variable: '--font-kanit'
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,15 +52,14 @@ export default function App({ Component, pageProps }: AppProps) {
     >
       <QueryClientProvider client={queryClient}>
         <WagmiProvider config={config}>
-          {/* <RainbowKitProvider> */}
-          {/* <Layout> */}
+          {/* <RainbowKitProvider theme={darkTheme()}> */}
           <SmartWalletsProvider>
+          <main className={`${kanit.variable}`}>
             <Component {...pageProps} />
-          </SmartWalletsProvider>
+            </main>
           {/* </Layout> */}
-          {/* </RainbowKitProvider> */}
-        </WagmiProvider>
-      </QueryClientProvider>
-    </PrivyProvider>
+          </SmartWalletsProvider>
+      </WagmiProvider>
+    </QueryClientProvider>
   );
 }

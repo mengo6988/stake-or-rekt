@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useReadContract } from "wagmi";
 import { parseEther, formatEther } from "viem";
+
 import { Battle } from "@/types/battle";
 import { Clock, Flame, Swords } from "lucide-react";
 import { Badge } from "./ui/badge";
@@ -11,7 +12,6 @@ import { Button } from "./ui/button";
 import { TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { Tooltip } from "@radix-ui/react-tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { toast } from "sonner";
 
 // Import the necessary ABIs
 import { battleAbi } from "@/config/abi/Battle";
@@ -19,6 +19,13 @@ import { extendedERC20ABI } from "@/config/abi/ERC20";
 import axios from "axios";
 import { useUnifiedWallet } from "@/hooks/useUnifiedWallet";
 import { useContractInteraction } from "@/hooks/useContractInteraction";
+
+// Function to get avatar src based on index
+const getAvatarSrc = (index: number) => {
+  // Cycle through the 4 avatars
+  const avatarNum = (index % 4) + 1;
+  return `/avatar${avatarNum}.svg`;
+};
 
 interface TokenVsTokenBattleCardProps {
   battle: Battle;
@@ -90,7 +97,7 @@ export default function TokenVsTokenBattleCard({
   useEffect(() => {
     const fetchTokenPrice = async () => {
       if (!battle.tokenA.address || !battle.tokenB.address) return;
-      
+
       try {
         console.log("tokenA address: ", battle.tokenA.address);
         console.log("tokenB address: ", battle.tokenB.address);
@@ -109,7 +116,7 @@ export default function TokenVsTokenBattleCard({
         console.error("Error fetching token prices:", error);
       }
     };
-    
+
     fetchTokenPrice();
   }, [battle.tokenA.address, battle.tokenB.address]);
 
@@ -119,23 +126,23 @@ export default function TokenVsTokenBattleCard({
       toast.success(`Successfully staked ${battle.tokenA.symbol}`);
       onJoinA(); // Call the onJoinA callback on success
     }
-    
+
     if (stakeB.isSuccess) {
       toast.success(`Successfully staked ${battle.tokenB.symbol}`);
       onJoinB(); // Call the onJoinB callback on success
     }
-    
+
     if (stakeA.error) {
       toast.error(`Failed to stake ${battle.tokenA.symbol}: ${stakeA.error}`);
     }
-    
+
     if (stakeB.error) {
       toast.error(`Failed to stake ${battle.tokenB.symbol}: ${stakeB.error}`);
     }
   }, [
-    stakeA.isSuccess, 
-    stakeB.isSuccess, 
-    stakeA.error, 
+    stakeA.isSuccess,
+    stakeB.isSuccess,
+    stakeA.error,
     stakeB.error,
     battle.tokenA.symbol,
     battle.tokenB.symbol,
@@ -168,6 +175,13 @@ export default function TokenVsTokenBattleCard({
     });
   };
 
+  // Override participants with generated avatars
+  const tokenAParticipantsList = battle.tokenA.participants_list.map(
+    (participant, index) => ({
+      ...participant,
+      avatar: getAvatarSrc(index),
+    })
+  );
   // Stake handlers
   const handleStakeTokenA = async (amount: number) => {
     if (!address) {
@@ -176,7 +190,7 @@ export default function TokenVsTokenBattleCard({
     }
 
     const stakeAmount = parseEther(amount.toString());
-    
+
     try {
       stakeA.execute({
         args: [stakeAmount]
@@ -194,7 +208,7 @@ export default function TokenVsTokenBattleCard({
     }
 
     const stakeAmount = parseEther(amount.toString());
-    
+
     try {
       stakeB.execute({
         args: [stakeAmount]
@@ -204,9 +218,15 @@ export default function TokenVsTokenBattleCard({
       toast.error(`Failed to stake ${battle.tokenB.symbol}: ${error.message}`);
     }
   };
+  const tokenBParticipantsList = battle.tokenB.participants_list.map(
+    (participant, index) => ({
+      ...participant,
+      avatar: getAvatarSrc(index + battle.tokenA.participants_list.length),
+    })
+  );
 
   return (
-    <div className="rounded-lg border bg-card hover:bg-accent/5 transition-colors">
+    <div className="rounded-lg bg-[#232333]">
       <div className="p-4 space-y-4">
         <div className="flex justify-between items-start">
           <div>
@@ -236,13 +256,13 @@ export default function TokenVsTokenBattleCard({
 
         <div className="grid grid-cols-2 gap-4 pt-2">
           <div className="rounded-md border p-3 space-y-2">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center gap-2">
               <Badge variant="outline" className="font-bold text-green-600">
                 {battle.tokenA.symbol}
               </Badge>
               {address && tokenABalance && (
                 <span className="text-xs text-muted-foreground">
-                  Balance: {formatEther(tokenABalance)}
+                  Balance: {parseFloat(formatEther(tokenABalance)).toFixed(2)}
                 </span>
               )}
             </div>
@@ -272,23 +292,22 @@ export default function TokenVsTokenBattleCard({
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full"
-                onClick={onJoinA} // Example stake amount
-                disabled={stakeA.isLoading}
+                className="w-full bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
+                onClick={onJoinA}
               >
-                {stakeA.isLoading ? "Staking..." : `Join ${battle.tokenA.symbol}`}
+                Stake {battle.tokenA.symbol}
               </Button>
             </div>
           </div>
 
           <div className="rounded-md border p-3 space-y-2">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center gap-2">
               <Badge variant="outline" className="font-bold text-red-600">
                 {battle.tokenB.symbol}
               </Badge>
               {address && tokenBBalance && (
                 <span className="text-xs text-muted-foreground">
-                  Balance: {formatEther(tokenBBalance)}
+                  Balance: {parseFloat(formatEther(tokenBBalance)).toFixed(2)}
                 </span>
               )}
             </div>
@@ -318,11 +337,10 @@ export default function TokenVsTokenBattleCard({
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full"
-                onClick={onJoinB} // Example stake amount
-                disabled={stakeB.isLoading}
+                className="w-full bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
+                onClick={onJoinB}
               >
-                {stakeB.isLoading ? "Staking..." : `Join ${battle.tokenB.symbol}`}
+                Stake {battle.tokenB.symbol}
               </Button>
             </div>
           </div>
@@ -330,28 +348,26 @@ export default function TokenVsTokenBattleCard({
 
         <div className="flex justify-center items-center gap-2 pt-1">
           <div className="flex -space-x-2">
-            {battle.tokenA.participants_list
-              .slice(0, 3)
-              .map((participant, i) => (
-                <TooltipProvider key={i}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Avatar className="h-6 w-6 border-2 border-background">
-                        <AvatarImage
-                          src={participant.avatar}
-                          alt={participant.name}
-                        />
-                        <AvatarFallback>
-                          {participant.name.substring(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{participant.name}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))}
+            {tokenAParticipantsList.slice(0, 3).map((participant, i) => (
+              <TooltipProvider key={i}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Avatar className="h-6 w-6 border-2 border-background">
+                      <AvatarImage
+                        src={participant.avatar}
+                        alt={participant.name}
+                      />
+                      <AvatarFallback>
+                        {participant.name.substring(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{participant.name}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
           </div>
 
           <div className="flex items-center gap-1">
@@ -360,28 +376,26 @@ export default function TokenVsTokenBattleCard({
           </div>
 
           <div className="flex -space-x-2">
-            {battle.tokenB.participants_list
-              .slice(0, 3)
-              .map((participant, i) => (
-                <TooltipProvider key={i}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Avatar className="h-6 w-6 border-2 border-background">
-                        <AvatarImage
-                          src={participant.avatar}
-                          alt={participant.name}
-                        />
-                        <AvatarFallback>
-                          {participant.name.substring(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{participant.name}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))}
+            {tokenBParticipantsList.slice(0, 3).map((participant, i) => (
+              <TooltipProvider key={i}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Avatar className="h-6 w-6 border-2 border-background">
+                      <AvatarImage
+                        src={participant.avatar}
+                        alt={participant.name}
+                      />
+                      <AvatarFallback>
+                        {participant.name.substring(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{participant.name}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
           </div>
         </div>
       </div>
