@@ -53,12 +53,16 @@ export function ActiveBattlesView() {
     (process.env.NEXT_PUBLIC_BATTLE_FACTORY_ADDRESS as Address) ||
     ("0x0000000000000000000000000000000000000000" as Address);
 
+  console.log("BATTLE: ", battleFactoryAddress);
+
   // Read the battle count from the BattleFactory contract
   const { data: battleCount } = useReadContract({
     address: battleFactoryAddress,
     abi: battleFactoryAbi,
     functionName: "getBattleCount",
   });
+
+  console.log("BATTLE: ", battleCount);
 
   // Get all battle addresses
   const { data: battleAddresses } = useReadContract({

@@ -25,10 +25,10 @@ export default async function handler(
 
     // 1inch API URL (Base Chain - 8453)
     const chainId = 8453;
-    const apiUrl = `https://api.1inch.dev/swap/v6.0/${chainId}/swap`;
+    const apiUrl = `https://api.1inch.dev/swap/v6.0/${chainId}/quote`;
 
     // Your 1inch API key - store in environment variables in production
-    const apiKey = process.env.ONE_INCH_API_KEY;
+    const apiKey = process.env.NEXT_PUBLIC_ONEINCH_API_KEY;
     
     if (!apiKey) {
       return res.status(500).json({ error: 'API key not configured' });
@@ -44,6 +44,7 @@ export default async function handler(
       disableEstimate: 'false',
       allowPartialFill: 'false',
     });
+    console.log("PARAMS: ", params)
 
     const response = await fetch(`${apiUrl}?${params.toString()}`, {
       method: 'GET',
@@ -52,6 +53,8 @@ export default async function handler(
         'Authorization': `Bearer ${apiKey}`
       },
     });
+
+    console.log("Response: ", response);
 
     if (!response.ok) {
       const errorData = await response.json();
