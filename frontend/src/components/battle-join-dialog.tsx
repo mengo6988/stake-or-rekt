@@ -22,9 +22,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Battle } from "@/types/battle";
-import { battleFactoryAbi } from "@/config/abi/BattleFactory";
-import { useAccount, useReadContract } from "wagmi";
-import { Address, erc20Abi, formatUnits } from "viem";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { Address, erc20Abi, formatUnits, parseUnits } from "viem";
+import { extendedERC20ABI } from "@/config/abi/ERC20";
 
 interface BattleJoinDialogProps {
   open: boolean;
@@ -43,42 +43,65 @@ export function BattleJoinDialog({
     "tokenA" | "tokenB" | null
   >(initialSelectedToken);
   const account = useAccount();
-  
+
   const [stakeAmount, setStakeAmount] = useState("");
   const [maxStakeAmount, setMaxStakeAmount] = useState(2500);
 
   const { data: tokenABalance = BigInt(0) } = useReadContract({
-      address: selectedBattle?.tokenA.address as Address,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [account.address as Address],
-      query: {
-        enabled: Boolean(selectedBattle && account)
-      }
-    }) as {data:bigint};
+    address: selectedBattle?.tokenA.address as Address,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: [account.address as Address],
+    query: {
+      enabled: Boolean(selectedBattle && account),
+    },
+  }) as { data: bigint };
 
-    const { data: tokenBBalance = BigInt(0) } = useReadContract({
-      address: selectedBattle?.tokenB.address as Address,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [account.address as Address],
-      query: {
-        enabled: Boolean(selectedBattle && account)
-      }
-    }) as {data:bigint};
+  const { data: tokenBBalance = BigInt(0) } = useReadContract({
+    address: selectedBattle?.tokenB.address as Address,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: [account.address as Address],
+    query: {
+      enabled: Boolean(selectedBattle && account),
+    },
+  }) as { data: bigint };
 
-    useEffect(() => {
-      console.log("acc:", account.address)
-      console.log("a: ",selectedBattle?.tokenA.address)
-      console.log("b: ",selectedBattle?.tokenB.address)
-      console.log("balance a", tokenABalance)
-      console.log("balance b", tokenBBalance)
+  const { writeContract: faucetTokenA } = useWriteContract();
 
-    })
+  const { writeContract: faucetTokenB } = useWriteContract();
+
+  useEffect(() => {
+    console.log("acc:", account.address);
+    console.log("a: ", selectedBattle?.tokenA.address);
+    console.log("b: ", selectedBattle?.tokenB.address);
+    console.log("balance a", tokenABalance);
+    console.log("balance b", tokenBBalance);
+  });
   // Update selectedToken when initialSelectedToken changes
   useEffect(() => {
     setSelectedToken(initialSelectedToken);
   }, [initialSelectedToken]);
+
+  const handleFaucetClick = async () => {
+    if (selectedBattle) {
+      if (selectedToken === "tokenA") {
+        faucetTokenA({
+          address: selectedBattle.tokenA.address as Address,
+          abi: extendedERC20ABI,
+          functionName: "faucet",
+          args: [parseUnits("1000", 18)],
+        });
+      } else {
+        faucetTokenB({
+          address: selectedBattle.tokenB.address as Address,
+          abi: extendedERC20ABI,
+          functionName: "faucet",
+          args: [parseUnits("1000", 18)],
+        });
+      }
+    }
+  };
 
   // Handle MAX button click
   const handleMaxClick = () => {
@@ -92,34 +115,40 @@ export function BattleJoinDialog({
   // Calculate potential reward based on user's stake
   const calculatePotentialReward = () => {
     if (!stakeAmount || isNaN(parseFloat(stakeAmount))) return "0";
-    
+
     const userStake = parseFloat(stakeAmount);
-    const yourTeamStake = selectedToken === "tokenA" 
-      ? selectedBattle.tokenA.totalStaked + userStake 
-      : selectedBattle.tokenB.totalStaked + userStake;
-    
-    const opposingTeamStake = selectedToken === "tokenA" 
-      ? selectedBattle.tokenB.totalStaked 
-      : selectedBattle.tokenA.totalStaked;
-    
+    const yourTeamStake =
+      selectedToken === "tokenA"
+        ? selectedBattle.tokenA.totalStaked + userStake
+        : selectedBattle.tokenB.totalStaked + userStake;
+
+    const opposingTeamStake =
+      selectedToken === "tokenA"
+        ? selectedBattle.tokenB.totalStaked
+        : selectedBattle.tokenA.totalStaked;
+
     const userShare = userStake / yourTeamStake;
     const potentialReward = userShare * opposingTeamStake;
-    
+
     return potentialReward.toFixed(6);
   };
 
   // Get symbol of opposing token
-  const opposingTokenSymbol = selectedToken === "tokenA" 
-    ? selectedBattle.tokenB.symbol 
-    : selectedBattle.tokenA.symbol;
+  const opposingTokenSymbol =
+    selectedToken === "tokenA"
+      ? selectedBattle.tokenB.symbol
+      : selectedBattle.tokenA.symbol;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] bg-background border-none">
         <DialogHeader>
-          <DialogTitle className="text-xl">Join Battle: {selectedBattle.name}</DialogTitle>
+          <DialogTitle className="text-xl">
+            Join Battle: {selectedBattle.name}
+          </DialogTitle>
           <DialogDescription>
-            Stake your tokens to join this battle and compete for the opposing tokens
+            Stake your tokens to join this battle and compete for the opposing
+            tokens
           </DialogDescription>
         </DialogHeader>
 
@@ -202,7 +231,11 @@ export function BattleJoinDialog({
               <div className="flex justify-between">
                 <Label htmlFor="stake-amount">Stake Amount</Label>
                 <span className="text-sm text-muted-foreground">
-                  Available: {formatUnits(selectedToken === "tokenA" ? tokenABalance : tokenBBalance, 18)}{" "}
+                  Available:{" "}
+                  {formatUnits(
+                    selectedToken === "tokenA" ? tokenABalance : tokenBBalance,
+                    18,
+                  )}{" "}
                   {selectedToken === "tokenA"
                     ? selectedBattle.tokenA.symbol
                     : selectedBattle.tokenB.symbol}
@@ -221,6 +254,7 @@ export function BattleJoinDialog({
                   MAX
                 </Button>
               </div>
+              <button onClick={handleFaucetClick}>FAUCET</button>
               <p className="text-xs text-muted-foreground">
                 Enter the amount you wish to stake in this battle
               </p>
@@ -299,7 +333,8 @@ export function BattleJoinDialog({
                   <span>
                     {(selectedToken === "tokenA"
                       ? selectedBattle.tokenA.totalStaked
-                      : selectedBattle.tokenB.totalStaked) + (parseFloat(stakeAmount) || 0)}{" "}
+                      : selectedBattle.tokenB.totalStaked) +
+                      (parseFloat(stakeAmount) || 0)}{" "}
                     {selectedToken === "tokenA"
                       ? selectedBattle.tokenA.symbol
                       : selectedBattle.tokenB.symbol}
@@ -340,8 +375,7 @@ export function BattleJoinDialog({
             <div className="flex items-start gap-2 rounded-md bg-yellow-500/10 p-3 text-sm">
               <AlertCircle className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
               <p>
-                By joining this battle, you agree to stake{" "}
-                {stakeAmount || "0"}{" "}
+                By joining this battle, you agree to stake {stakeAmount || "0"}{" "}
                 {selectedToken === "tokenA"
                   ? selectedBattle.tokenA.symbol
                   : selectedBattle.tokenB.symbol}
@@ -353,10 +387,14 @@ export function BattleJoinDialog({
         )}
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="hover:bg-red-500 hover:font-bold hover:border-black">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="hover:bg-red-500 hover:font-bold hover:border-black"
+          >
             Cancel
           </Button>
-          <Button 
+          <Button
             disabled={!stakeAmount || parseFloat(stakeAmount) <= 0}
             className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
