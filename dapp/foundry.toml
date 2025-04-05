@@ -11,3 +11,7 @@ runs = 256
 [profile.default.invariant]
 runs = 256
 depth = 64
+
+[rpc_endpoints]
+base = "${BASE_RPC_URL}"
+baseSepolia = "${BASE_SEPOLIA_RPC_URL}"
