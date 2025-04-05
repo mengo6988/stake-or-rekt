@@ -1,13 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import {
-  useAccount,
-  useReadContract,
-  useWriteContract,
-  useWaitForTransactionReceipt,
-} from "wagmi";
-import { parseEther, formatEther } from "viem";
+import { useAccount, useReadContract } from "wagmi";
+import { formatEther } from "viem";
 import { Battle } from "@/types/battle";
 import { Clock, Flame, Swords } from "lucide-react";
 import { Badge } from "./ui/badge";
@@ -16,7 +10,6 @@ import { Button } from "./ui/button";
 import { TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { Tooltip } from "@radix-ui/react-tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { toast } from "sonner";
 
 // Import the necessary ABIs
 import { battleAbi } from "@/config/abi/Battle";
@@ -69,55 +62,6 @@ export default function TokenVsTokenBattleCard({
     query: { enabled: isConnected },
   }) as { data: bigint };
 
-  // Prepare write contract hooks for staking
-  const {
-    writeContract: stakeTokenAWrite,
-    data: stakeTokenATxHash,
-    error: stakeTokenAError,
-  } = useWriteContract();
-
-  const {
-    writeContract: stakeTokenBWrite,
-    data: stakeTokenBTxHash,
-    error: stakeTokenBError,
-  } = useWriteContract();
-
-  // Wait for transaction confirmations
-  const { isSuccess: isStakeTokenASuccess } = useWaitForTransactionReceipt({
-    hash: stakeTokenATxHash,
-  });
-
-  const { isSuccess: isStakeTokenBSuccess } = useWaitForTransactionReceipt({
-    hash: stakeTokenBTxHash,
-  });
-
-  // Handle staking errors and successes
-  useMemo(() => {
-    if (stakeTokenAError) {
-      toast.error(
-        `Failed to stake ${battle.tokenA.symbol}: ${stakeTokenAError.message}`
-      );
-    }
-    if (stakeTokenBError) {
-      toast.error(
-        `Failed to stake ${battle.tokenB.symbol}: ${stakeTokenBError.message}`
-      );
-    }
-    if (isStakeTokenASuccess) {
-      toast.success(`Successfully staked ${battle.tokenA.symbol}`);
-    }
-    if (isStakeTokenBSuccess) {
-      toast.success(`Successfully staked ${battle.tokenB.symbol}`);
-    }
-  }, [
-    stakeTokenAError,
-    stakeTokenBError,
-    isStakeTokenASuccess,
-    isStakeTokenBSuccess,
-    battle.tokenA.symbol,
-    battle.tokenB.symbol,
-  ]);
-
   // Difficulty color mapping
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -155,49 +99,6 @@ export default function TokenVsTokenBattleCard({
     });
   };
 
-  // Stake handlers
-  const handleStakeTokenA = async (amount: number) => {
-    if (!isConnected) {
-      toast.error("Please connect your wallet first");
-      return;
-    }
-
-    const stakeAmount = parseEther(amount.toString());
-
-    try {
-      stakeTokenAWrite({
-        address: battle.address as `0x${string}`,
-        abi: battleAbi,
-        functionName: "stakeTokenA",
-        args: [stakeAmount],
-      });
-    } catch (error: any) {
-      console.error("Stake Token A Error:", error);
-      toast.error(`Failed to stake ${battle.tokenA.symbol}: ${error.message}`);
-    }
-  };
-
-  const handleStakeTokenB = async (amount: number) => {
-    if (!isConnected) {
-      toast.error("Please connect your wallet first");
-      return;
-    }
-
-    const stakeAmount = parseEther(amount.toString());
-
-    try {
-      stakeTokenBWrite({
-        address: battle.address as `0x${string}`,
-        abi: battleAbi,
-        functionName: "stakeTokenB",
-        args: [stakeAmount],
-      });
-    } catch (error: any) {
-      console.error("Stake Token B Error:", error);
-      toast.error(`Failed to stake ${battle.tokenB.symbol}: ${error.message}`);
-    }
-  };
-
   return (
     <div className="rounded-lg border bg-card hover:bg-accent/5 transition-colors">
       <div className="p-4 space-y-4">
@@ -229,13 +130,13 @@ export default function TokenVsTokenBattleCard({
 
         <div className="grid grid-cols-2 gap-4 pt-2">
           <div className="rounded-md border p-3 space-y-2">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center gap-2">
               <Badge variant="outline" className="font-bold text-green-600">
                 {battle.tokenA.symbol}
               </Badge>
               {isConnected && tokenABalance && (
                 <span className="text-xs text-muted-foreground">
-                  Balance: {formatEther(tokenABalance)}
+                  Balance: {parseFloat(formatEther(tokenABalance)).toFixed(2)}
                 </span>
               )}
             </div>
@@ -266,7 +167,6 @@ export default function TokenVsTokenBattleCard({
                 size="sm"
                 className="w-full"
                 onClick={onJoinA}
-                // onClick={() => handleStakeTokenA(0.1)} // Example stake amount
               >
                 Join {battle.tokenA.symbol}
               </Button>
@@ -274,13 +174,13 @@ export default function TokenVsTokenBattleCard({
           </div>
 
           <div className="rounded-md border p-3 space-y-2">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center gap-2">
               <Badge variant="outline" className="font-bold text-red-600">
                 {battle.tokenB.symbol}
               </Badge>
               {isConnected && tokenBBalance && (
                 <span className="text-xs text-muted-foreground">
-                  Balance: {formatEther(tokenBBalance)}
+                  Balance: {parseFloat(formatEther(tokenBBalance)).toFixed(2)}
                 </span>
               )}
             </div>
@@ -311,7 +211,6 @@ export default function TokenVsTokenBattleCard({
                 size="sm"
                 className="w-full"
                 onClick={onJoinB}
-                // onClick={() => handleStakeTokenB(0.1)} // Example stake amount
               >
                 Join {battle.tokenB.symbol}
               </Button>
