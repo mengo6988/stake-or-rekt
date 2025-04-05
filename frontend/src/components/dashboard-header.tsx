@@ -32,7 +32,7 @@ export function DashboardHeader() {
           </Button>
           <Link href="/" className="flex items-center gap-2">
             <Trophy className="h-6 w-6 text-white" />
-            <span className="text-xl font-bold">TokenBattle</span>
+            <span className="text-xl font-bold">Stake-or-Rekt</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6 ml-6">
             <Link

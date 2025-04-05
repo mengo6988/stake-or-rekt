@@ -59,9 +59,6 @@ export function BattlesSection() {
               </TabsContent>
             </Tabs>
           </CardContent>
-          <CardFooter>
-            <Button className="w-full">Create New Battle</Button>
-          </CardFooter>
         </Card>
       </div>
     </div>
