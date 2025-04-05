@@ -24,6 +24,7 @@ import { Battle } from "@/types/battle";
 import TokenVsTokenBattleCard from "./token-vs-token-battle-card";
 import { BattleJoinDialog } from "@/components/battle-join-dialog";
 import { battles } from "@/data/battle";
+import { CreateBattleDialog } from "./create-battle-dialog";
 
 export function ActiveBattlesView() {
   const [sortBy, setSortBy] = useState("timeLeft");
@@ -33,6 +34,7 @@ export function ActiveBattlesView() {
   const [selectedToken, setSelectedToken] = useState<
     "tokenA" | "tokenB" | null
   >(null);
+  const [createBattle, setCreateBattle] = useState(false);
 
   // Calculate dollar value based on token price
   const calculateDollarValue = (amount: number, symbol: string) => {
@@ -56,6 +58,10 @@ export function ActiveBattlesView() {
       maximumFractionDigits: 0
     });
   };
+
+  const onCreateBattle = (tokenA: string, tokenB: string, durationInSeconds: number) => {
+    console.log(tokenA, tokenB, durationInSeconds);
+  }
 
   // Filter and sort battles
   const filteredBattles = battles
@@ -133,7 +139,7 @@ export function ActiveBattlesView() {
                 <ArrowUpDown className="h-4 w-4" />
                 Sort
               </Button>
-              <Button size="sm" className="gap-1">
+              <Button size="sm" className="gap-1" onClick={() => setCreateBattle(true)}>
                 <Swords className="h-4 w-4" />
                 Create Battle
               </Button>
@@ -293,13 +299,16 @@ export function ActiveBattlesView() {
         </CardContent>
       </Card>
 
-      {/* Using the extracted BattleJoinDialog component */}
+      {/* Battle join modal*/}
       <BattleJoinDialog
         open={!!selectedBattle}
         onOpenChange={handleDialogOpenChange}
         selectedBattle={selectedBattle}
         initialSelectedToken={selectedToken}
       />
+
+      {/* Battle create modal */}
+      <CreateBattleDialog open={createBattle} onOpenChange={setCreateBattle} onCreateBattle={onCreateBattle} />
     </div>
   );
 }
