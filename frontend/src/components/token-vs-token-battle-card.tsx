@@ -100,7 +100,7 @@ export default function TokenVsTokenBattleCard({
   };
 
   return (
-    <div className="rounded-lg border bg-card hover:bg-accent/5 transition-colors">
+    <div className="rounded-lg bg-[#232333]">
       <div className="p-4 space-y-4">
         <div className="flex justify-between items-start">
           <div>
@@ -165,7 +165,7 @@ export default function TokenVsTokenBattleCard({
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full"
+                className="w-full bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
                 onClick={onJoinA}
               >
                 Join {battle.tokenA.symbol}
@@ -209,7 +209,7 @@ export default function TokenVsTokenBattleCard({
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full"
+                className="w-full bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
                 onClick={onJoinB}
               >
                 Join {battle.tokenB.symbol}

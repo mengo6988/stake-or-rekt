@@ -407,23 +407,31 @@ export function ActiveBattlesView() {
         <CardHeader className="pb-3">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <CardTitle>Token vs Token Battles</CardTitle>
+              <CardTitle>Coin v Coin Battles</CardTitle>
               <CardDescription>
                 Join a side and stake your tokens to win the opposing tokens
               </CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
-              <Button variant="outline" size="sm" className="gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer "
+              >
                 <Filter className="h-4 w-4" />
                 Filters
               </Button>
-              <Button variant="outline" size="sm" className="gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
+              >
                 <ArrowUpDown className="h-4 w-4" />
                 Sort
               </Button>
               <Button
                 size="sm"
-                className="gap-1"
+                className="gap-1 bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
                 onClick={() => setCreateBattle(true)}
               >
                 <Swords className="h-4 w-4" />
@@ -485,7 +493,7 @@ export function ActiveBattlesView() {
 
               {isLoading ? (
                 <div className="py-20 text-center">
-                  <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <div className="animate-spin h-8 w-8 rounded-full mx-auto mb-4"></div>
                   <p className="text-muted-foreground">
                     Loading battles from the blockchain...
                   </p>
@@ -505,7 +513,7 @@ export function ActiveBattlesView() {
                 </div>
               ) : (
                 <>
-                  <TabsContent value="grid" className="pt-2">
+                  <TabsContent value="grid">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {filteredBattles.map((battle) => (
                         <TokenVsTokenBattleCard
@@ -519,8 +527,8 @@ export function ActiveBattlesView() {
                   </TabsContent>
 
                   <TabsContent value="list" className="pt-2">
-                    <div className="rounded-md border overflow-hidden">
-                      <div className="grid grid-cols-7 gap-2 p-3 text-sm font-medium bg-muted/50">
+                    <div className="rounded-md overflow-hidden">
+                      <div className="grid grid-cols-7 gap-2 p-3 text-sm font-medium bg-[#232333]">
                         <div>Battle</div>
                         <div className="col-span-2">Details</div>
                         <div className="col-span-2">Token A</div>
@@ -574,8 +582,8 @@ export function ActiveBattlesView() {
                               </div>
                               <Button
                                 size="sm"
-                                variant="outline"
-                                className="mt-1 w-full"
+                                variant="custom"
+                                className="mt-1 w-full bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
                                 onClick={() =>
                                   handleJoinBattle(battle, "tokenA")
                                 }
@@ -599,7 +607,7 @@ export function ActiveBattlesView() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="mt-1 w-full"
+                                className="mt-1 w-full bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
                                 onClick={() =>
                                   handleJoinBattle(battle, "tokenB")
                                 }
