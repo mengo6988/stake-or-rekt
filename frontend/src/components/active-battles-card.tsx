@@ -6,33 +6,33 @@ import Link from "next/link";
 const userActiveBattles = [
   {
     id: "101",
-    name: "ETH vs USDC",
+    name: "BRETT vs TOSHI",
     joinedSide: "tokenA",
-    yourStake: { amount: 0.5, symbol: "ETH", usdValue: 1430 },
-    potentialReward: { amount: 1400, symbol: "USDC", usdValue: 1400 },
+    yourStake: { amount: 0.5, symbol: "BRETT", usdValue: 1430 },
+    potentialReward: { amount: 1400, symbol: "BRETT", usdValue: 1400 },
     endsIn: "11h 31m",
     status: "winning", // winning, losing, tied
-    teamSize: { yours: 3, opponent: 2 },
+    currentTVL: { yours: "$1430.20", opponent: "$1222.30" },
   },
   {
     id: "202",
-    name: "TKNS vs BTC",
+    name: "DEGEN vs PONKE",
     joinedSide: "tokenA",
-    yourStake: { amount: 500, symbol: "TKNS", usdValue: 450 },
-    potentialReward: { amount: 0.0075, symbol: "BTC", usdValue: 465 },
+    yourStake: { amount: 500, symbol: "DEGEN", usdValue: 450 },
+    potentialReward: { amount: 0.0075, symbol: "DEGEN", usdValue: 465 },
     endsIn: "12h 32m",
     status: "tied",
-    teamSize: { yours: 4, opponent: 4 },
+    currentTVL: { yours: "$630.20", opponent: "$630.20"  },
   },
   {
     id: "303",
-    name: "SOL vs DAI",
+    name: "DOGINME vs SKI",
     joinedSide: "tokenB",
-    yourStake: { amount: 200, symbol: "DAI", usdValue: 200 },
-    potentialReward: { amount: 2.5, symbol: "SOL", usdValue: 205 },
+    yourStake: { amount: 200, symbol: "DOGINME", usdValue: 200 },
+    potentialReward: { amount: 2.5, symbol: "DOGINME", usdValue: 205 },
     endsIn: "13h 33m",
     status: "losing",
-    teamSize: { yours: 4, opponent: 5 },
+    currentTVL: { yours: "$730.70", opponent: "$4534.60"  },
   },
 ];
 
@@ -159,8 +159,8 @@ export default function ActiveBattlesCard() {
                   </span>
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  Team size: {battle.teamSize.yours} vs{" "}
-                  {battle.teamSize.opponent}
+                  Current TVL: {battle.currentTVL.yours} vs{" "}
+                  {battle.currentTVL.opponent}
                 </div>
               </div>
             </div>
