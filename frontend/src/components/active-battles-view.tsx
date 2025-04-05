@@ -588,7 +588,7 @@ export function ActiveBattlesView() {
                                   handleJoinBattle(battle, "tokenA")
                                 }
                               >
-                                Join {battle.tokenA.symbol}
+                                Stake {battle.tokenA.symbol}
                               </Button>
                             </div>
                             <div className="col-span-2">
@@ -612,7 +612,7 @@ export function ActiveBattlesView() {
                                   handleJoinBattle(battle, "tokenB")
                                 }
                               >
-                                Join {battle.tokenB.symbol}
+                                Stake {battle.tokenB.symbol}
                               </Button>
                             </div>
                           </div>

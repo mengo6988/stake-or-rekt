@@ -15,6 +15,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { battleAbi } from "@/config/abi/Battle";
 import { extendedERC20ABI } from "@/config/abi/ERC20";
 
+// Function to get avatar src based on index
+const getAvatarSrc = (index: number) => {
+  // Cycle through the 4 avatars
+  const avatarNum = (index % 4) + 1;
+  return `/avatar${avatarNum}.svg`;
+};
+
 interface TokenVsTokenBattleCardProps {
   battle: Battle;
   onJoinA: () => void;
@@ -99,6 +106,21 @@ export default function TokenVsTokenBattleCard({
     });
   };
 
+  // Override participants with generated avatars
+  const tokenAParticipantsList = battle.tokenA.participants_list.map(
+    (participant, index) => ({
+      ...participant,
+      avatar: getAvatarSrc(index),
+    })
+  );
+
+  const tokenBParticipantsList = battle.tokenB.participants_list.map(
+    (participant, index) => ({
+      ...participant,
+      avatar: getAvatarSrc(index + battle.tokenA.participants_list.length),
+    })
+  );
+
   return (
     <div className="rounded-lg bg-[#232333]">
       <div className="p-4 space-y-4">
@@ -168,7 +190,7 @@ export default function TokenVsTokenBattleCard({
                 className="w-full bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
                 onClick={onJoinA}
               >
-                Join {battle.tokenA.symbol}
+                Stake {battle.tokenA.symbol}
               </Button>
             </div>
           </div>
@@ -212,7 +234,7 @@ export default function TokenVsTokenBattleCard({
                 className="w-full bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
                 onClick={onJoinB}
               >
-                Join {battle.tokenB.symbol}
+                Stake {battle.tokenB.symbol}
               </Button>
             </div>
           </div>
@@ -220,28 +242,26 @@ export default function TokenVsTokenBattleCard({
 
         <div className="flex justify-center items-center gap-2 pt-1">
           <div className="flex -space-x-2">
-            {battle.tokenA.participants_list
-              .slice(0, 3)
-              .map((participant, i) => (
-                <TooltipProvider key={i}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Avatar className="h-6 w-6 border-2 border-background">
-                        <AvatarImage
-                          src={participant.avatar}
-                          alt={participant.name}
-                        />
-                        <AvatarFallback>
-                          {participant.name.substring(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{participant.name}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))}
+            {tokenAParticipantsList.slice(0, 3).map((participant, i) => (
+              <TooltipProvider key={i}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Avatar className="h-6 w-6 border-2 border-background">
+                      <AvatarImage
+                        src={participant.avatar}
+                        alt={participant.name}
+                      />
+                      <AvatarFallback>
+                        {participant.name.substring(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{participant.name}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
           </div>
 
           <div className="flex items-center gap-1">
@@ -250,28 +270,26 @@ export default function TokenVsTokenBattleCard({
           </div>
 
           <div className="flex -space-x-2">
-            {battle.tokenB.participants_list
-              .slice(0, 3)
-              .map((participant, i) => (
-                <TooltipProvider key={i}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Avatar className="h-6 w-6 border-2 border-background">
-                        <AvatarImage
-                          src={participant.avatar}
-                          alt={participant.name}
-                        />
-                        <AvatarFallback>
-                          {participant.name.substring(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{participant.name}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))}
+            {tokenBParticipantsList.slice(0, 3).map((participant, i) => (
+              <TooltipProvider key={i}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Avatar className="h-6 w-6 border-2 border-background">
+                      <AvatarImage
+                        src={participant.avatar}
+                        alt={participant.name}
+                      />
+                      <AvatarFallback>
+                        {participant.name.substring(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{participant.name}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
           </div>
         </div>
       </div>
