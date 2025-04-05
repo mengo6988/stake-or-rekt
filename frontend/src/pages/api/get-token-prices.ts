@@ -32,7 +32,7 @@ export default async function handler(
 
     // Get token A price
     const tokenAResponse = await axios.get(
-      `https://api.1inch.dev/price/v1.1/${chainId}/${tokenAAddress}`, 
+      `https://api.1inch.dev/price/v1.1/${chainId}/${tokenAAddress}?currency=USD`, 
       {
         headers: {
           'Accept': 'application/json',
@@ -43,7 +43,7 @@ export default async function handler(
 
     // Get token B price
     const tokenBResponse = await axios.get(
-      `https://api.1inch.dev/price/v1.1/${chainId}/${tokenBAddress}`, 
+      `https://api.1inch.dev/price/v1.1/${chainId}/${tokenBAddress}?currency=USD`, 
       {
         headers: {
           'Accept': 'application/json',
@@ -54,6 +54,9 @@ export default async function handler(
 
     const tokenAPrice = tokenAResponse.data[tokenAAddress.toString().toLowerCase()];
     const tokenBPrice = tokenBResponse.data[tokenBAddress.toString().toLowerCase()];
+
+    console.log(tokenAPrice)
+    console.log(tokenBPrice)
 
     if (!tokenAPrice || !tokenBPrice) {
       return res.status(404).json({ error: 'Could not retrieve prices for one or both tokens' });

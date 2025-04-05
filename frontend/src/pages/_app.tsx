@@ -8,6 +8,7 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { arbitrum, base, baseSepolia ,mainnet, optimism, polygon } from "wagmi/chains";
 import { WagmiProvider } from "wagmi";
+import { localBase } from "@/config/chains";
 import { config } from "@/config/wagmi";
 
 const queryClient = new QueryClient({
@@ -18,13 +19,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-// const config = getDefaultConfig({
-//   appName: "My RainbowKit App",
-//   projectId: "Stake-or-Rekt",
-//   chains: [mainnet, polygon, optimism, arbitrum, base, baseSepolia],
-//   ssr: true, // If your dApp uses server side rendering (SSR)
-// });
 
 export default function App({ Component, pageProps }: AppProps) {
   return (

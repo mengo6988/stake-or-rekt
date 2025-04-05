@@ -17,3 +17,4 @@ anvil \
   --chain-id 8453 \
   --timeout 300000 \
   --port 8545 \
+  --no-storage-caching
