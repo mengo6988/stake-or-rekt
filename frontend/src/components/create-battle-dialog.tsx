@@ -1,11 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  useAccount,
-  useWriteContract,
-  useWaitForTransactionReceipt,
-} from "wagmi";
+import { useCallback, useEffect, useState } from "react";
 import { type Address } from "viem";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +23,8 @@ import {
 import { AlertCircle, Swords, Loader } from "lucide-react";
 import { battleFactoryAbi } from "@/config/abi/BattleFactory";
 import { toast } from "react-hot-toast"; // Assuming you have this for notifications
+import { useUnifiedWallet } from "@/hooks/useUnifiedWallet";
+import { useContractInteraction } from "@/hooks/useContractInteraction";
 
 interface CreateBattleDialogProps {
   open: boolean;
@@ -36,7 +33,7 @@ interface CreateBattleDialogProps {
     tokenA: string,
     tokenB: string,
     durationInSeconds: number,
-    battleAddress?: string
+    battleAddress?: string,
   ) => void;
   battleFactoryAddress: Address;
 }
@@ -47,37 +44,78 @@ export function CreateBattleDialog({
   onCreateBattle,
   battleFactoryAddress,
 }: CreateBattleDialogProps) {
-  const { address: userAddress, isConnected } = useAccount();
+  const { address, isConfirmed, receipt } = useUnifiedWallet();
   const [tokenA, setTokenA] = useState("");
   const [tokenB, setTokenB] = useState("");
   const [duration, setDuration] = useState("");
   const [durationUnit, setDurationUnit] = useState("days");
+  const [pendingBattleCreation, setPendingBattleCreation] = useState(false);
 
   // Contract write hook
-  const { writeContract, data: txHash, isPending, error } = useWriteContract();
-
-  // Wait for transaction receipt
-  const {
-    isLoading: isConfirming,
-    isSuccess: isConfirmed,
-    error: confirmError,
-  } = useWaitForTransactionReceipt({
-    hash: txHash,
+  const createBattle = useContractInteraction({
+    to: battleFactoryAddress,
+    abi: battleFactoryAbi,
+    functionName: "createBattle",
+    args: [tokenA as Address, tokenB as Address, BigInt(0)],
+    description: "Create Battle"
   });
+
+  // Debug logging
+  useEffect(() => {
+    console.log("CreateBattleDialog State:", { 
+      pendingBattleCreation,
+      createBattleState: {
+        isLoading: createBattle.isLoading,
+        isSuccess: createBattle.isSuccess,
+        error: createBattle.error,
+      },
+      unifiedWalletState: {
+        isConfirmed,
+        latestHash: createBattle.latestHash,
+      }
+    });
+  }, [
+    pendingBattleCreation, 
+    createBattle.isLoading, 
+    createBattle.isSuccess, 
+    createBattle.error, 
+    isConfirmed, 
+    createBattle.latestHash
+  ]);
+
+  // Reset latestHash after transaction is confirmed or failed
+  useEffect(() => {
+    if (isConfirmed && createBattle.latestHash) {
+      // Small delay to ensure hooks have time to process the confirmation
+      const timer = setTimeout(() => {
+        createBattle.setLatestHash(undefined);
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isConfirmed, createBattle.latestHash, createBattle.setLatestHash]);
 
   const resetForm = () => {
     setTokenA("");
     setTokenB("");
     setDuration("");
     setDurationUnit("days");
+    setPendingBattleCreation(false);
+    createBattle.reset();
   };
 
   const handleClose = () => {
+    // Only prevent closing if an actual transaction is in progress
+    if (createBattle.isLoading) {
+      toast.error("Please wait for the transaction to complete");
+      return;
+    }
+    
     resetForm();
     onOpenChange(false);
   };
 
-  const calculateDurationInSeconds = () => {
+  const calculateDurationInSeconds = useCallback(() => {
     const durationValue = parseFloat(duration);
     let durationInSeconds = 0;
 
@@ -97,10 +135,10 @@ export function CreateBattleDialog({
 
     // Round to integer seconds
     return Math.floor(durationInSeconds);
-  };
+  }, [duration, durationUnit]);
 
   const handleCreateBattle = async () => {
-    if (!isConnected) {
+    if (!address) {
       toast.error("Please connect your wallet first");
       return;
     }
@@ -118,53 +156,91 @@ export function CreateBattleDialog({
     try {
       // Convert duration to seconds based on selected unit
       const durationInSeconds = calculateDurationInSeconds();
+      
+      // Mark as pending to handle callback after confirmation
+      setPendingBattleCreation(true);
+
+      // Reset prior transaction state just to be safe
+      createBattle.reset();
 
       // Call the BattleFactory contract's createBattle function
-      writeContract({
-        address: battleFactoryAddress,
-        abi: battleFactoryAbi,
-        functionName: "createBattle",
+      await createBattle.execute({
         args: [tokenA as Address, tokenB as Address, BigInt(durationInSeconds)],
       });
     } catch (err) {
       console.error("Error creating battle:", err);
       toast.error("Failed to create battle. Please try again.");
+      setPendingBattleCreation(false);
     }
   };
 
-  // Get the created battle address from transaction receipt when confirmed
+  // Track transaction completion and call the callback
   useEffect(() => {
-    const getBattleAddressFromTx = async () => {
-      if (isConfirmed && txHash && onCreateBattle && tokenA && tokenB) {
+    if (isConfirmed && pendingBattleCreation && receipt && onCreateBattle) {
+      try {
+        const durationInSeconds = calculateDurationInSeconds();
+        
+        // Extract battle address from logs if possible
+        let battleAddress;
+        
+        // If we have a receipt, try to extract the battle address from event logs
+        if (receipt.logs && receipt.logs.length > 0) {
+          // Look for BattleCreated event in logs
+          // This is an example - adjust based on your actual event structure
+          try {
+            // Find the right log entry
+            // This is just a placeholder - you'll need to implement this based on your contract's event structure
+            const battleCreatedEvent = receipt.logs.find(log => 
+              log.topics && log.topics[0] === "0x..." // Your event signature hash
+            );
+            
+            if (battleCreatedEvent && battleCreatedEvent.data) {
+              // Extract the battle address from the event data
+              // Again, this is just an example
+              // battleAddress = "0x" + battleCreatedEvent.data.slice(26, 66);
+            }
+          } catch (parseErr) {
+            console.error("Error parsing event logs:", parseErr);
+          }
+        }
+        
+        // Call the callback with the battle information
+        onCreateBattle(tokenA, tokenB, durationInSeconds, battleAddress);
+        
+        toast.success("Battle created successfully!");
+        
+        // Reset form and close dialog after successful transaction
+        resetForm();
+        onOpenChange(false);
+      } catch (err) {
+        console.error("Error handling battle creation completion:", err);
+        toast.success("Battle created, but couldn't verify details");
+        
+        // Still call callback on best effort
         try {
           const durationInSeconds = calculateDurationInSeconds();
           onCreateBattle(tokenA, tokenB, durationInSeconds);
-
-          toast.success("Battle created successfully!");
-
-          // Reset form after successful transaction
-          resetForm();
-        } catch (err) {
-          console.error("Error getting transaction receipt:", err);
-          toast.success("Battle created, but couldn't verify details");
-
-          // Still call callback and reset form on best effort
-          const durationInSeconds = calculateDurationInSeconds();
-          onCreateBattle(tokenA, tokenB, durationInSeconds);
-          resetForm();
+        } catch (callbackErr) {
+          console.error("Error in callback:", callbackErr);
         }
+        
+        resetForm();
+        onOpenChange(false);
       }
-    };
-
-    getBattleAddressFromTx();
-  }, [isConfirmed, txHash]);
-
-  // Show errors via toast
-  if (error || confirmError) {
-    const errorMessage =
-      (error || confirmError)?.message || "Transaction failed";
-    toast.error(errorMessage);
-  }
+      
+      // Reset the pending state
+      setPendingBattleCreation(false);
+    }
+  }, [
+    isConfirmed,
+    pendingBattleCreation,
+    receipt,
+    onCreateBattle,
+    tokenA,
+    tokenB,
+    calculateDurationInSeconds,
+    onOpenChange
+  ]);
 
   const isFormValid = () => {
     return (
@@ -173,7 +249,7 @@ export function CreateBattleDialog({
       tokenA !== tokenB &&
       duration &&
       parseFloat(duration) > 0 &&
-      isConnected
+      address
     );
   };
 
@@ -199,7 +275,7 @@ export function CreateBattleDialog({
               placeholder="0x..."
               value={tokenA}
               onChange={(e) => setTokenA(e.target.value)}
-              disabled={isPending || isConfirming}
+              disabled={createBattle.isLoading}
             />
             <p className="text-xs text-muted-foreground">
               Enter the contract address of the first token
@@ -213,7 +289,7 @@ export function CreateBattleDialog({
               placeholder="0x..."
               value={tokenB}
               onChange={(e) => setTokenB(e.target.value)}
-              disabled={isPending || isConfirming}
+              disabled={createBattle.isLoading}
             />
             <p className="text-xs text-muted-foreground">
               Enter the contract address of the second token
@@ -231,7 +307,7 @@ export function CreateBattleDialog({
                 placeholder="Enter duration"
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
-                disabled={isPending || isConfirming}
+                disabled={createBattle.isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -239,7 +315,7 @@ export function CreateBattleDialog({
               <Select
                 value={durationUnit}
                 onValueChange={(value) => setDurationUnit(value)}
-                disabled={isPending || isConfirming}
+                disabled={createBattle.isLoading}
               >
                 <SelectTrigger id="duration-unit">
                   <SelectValue placeholder="Select unit" />
@@ -275,18 +351,16 @@ export function CreateBattleDialog({
             variant="outline"
             onClick={handleClose}
             className="hover:bg-red-500 hover:font-bold hover:border-black"
-            disabled={isPending || isConfirming}
+            disabled={createBattle.isLoading}
           >
             Cancel
           </Button>
           <Button
-            disabled={
-              !isFormValid() || isPending || isConfirming || isConfirmed
-            }
+            disabled={!isFormValid() || createBattle.isLoading}
             onClick={handleCreateBattle}
             className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
-            {isPending || isConfirming ? (
+            {createBattle.isLoading ? (
               <>
                 <Loader className="mr-2 h-4 w-4 animate-spin" />
                 Creating Battle...

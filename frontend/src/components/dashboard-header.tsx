@@ -3,19 +3,10 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Bell, Menu, Trophy, Wallet } from "lucide-react"
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { Bell, Menu, Trophy, } from "lucide-react"
 import { useRouter } from "next/router"
 import { cn } from "@/lib/utils"
+import WalletConnectButton from "./wallet-connect-button"
 
 export function DashboardHeader() {
   const router = useRouter()
@@ -49,8 +40,9 @@ export function DashboardHeader() {
           </nav>
         </div>
         <div className="flex items-center gap-4">
+          <WalletConnectButton />
 
-          <ConnectButton />
+          {/* <ConnectButton /> */}
           {/* {isConnected ? ( */}
           {/*   <> */}
           {/*     <Button variant="outline" size="sm" className="hidden md:flex gap-2"> */}

@@ -1,5 +1,6 @@
 // config/wagmi.ts
-import { http, createConfig } from "wagmi";
+import {  createConfig } from "@privy-io/wagmi";
+import { http } from "wagmi";
 import { base, baseSepolia, localBase } from "./chains";
 import { type Chain } from "viem";
 

@@ -6,6 +6,7 @@ import {
   useAccount,
   useWriteContract,
   useReadContract,
+  useBalance,
 } from "wagmi";
 import { extendedERC20ABI } from "@/config/abi/ERC20";
 
@@ -30,8 +31,11 @@ interface WalletHookResult {
   receipt: TransactionReceipt | undefined;
   isConfirming: boolean;
   userBalance: bigint;
-  refetchUserBalance: () => Promise<unknown>
-  setLatestHash: React.Dispatch<React.SetStateAction<Address | undefined>>
+  refetchUserBalance: () => Promise<unknown>;
+  nativeBalance: bigint;
+  formattedNativeBalance: string;
+  refetchNativeBalance: () => Promise<unknown>;
+  setLatestHash: React.Dispatch<React.SetStateAction<Address | undefined>>;
 }
 
 export function useUnifiedWallet(): WalletHookResult {
@@ -46,6 +50,7 @@ export function useUnifiedWallet(): WalletHookResult {
   const [latestHash, setLatestHash] = useState<Address | undefined>();
   const [isLoading, setIsLoading] = useState(false);
 
+  // Get ERC20 token balance
   const { data: userBalance = BigInt(0), refetch: refetchUserBalance } = useReadContract({
     address: process.env.NEXT_PUBLIC_COLLATERAL_ADDRESS as Address,
     abi: extendedERC20ABI,
@@ -53,21 +58,35 @@ export function useUnifiedWallet(): WalletHookResult {
     args: address ? [address] : undefined,
     query: {
       enabled: Boolean(address),
-      // Refetch on window focus
       refetchOnWindowFocus: true,
-      // Refetch on network reconnection
       refetchOnReconnect: true,
     },
   }) as { data: bigint, refetch: ()=>Promise<unknown> };
 
+  // Get native token balance (ETH, MATIC, etc.)
+  const { 
+    data: nativeBalanceData,
+    refetch: refetchNativeBalance 
+  } = useBalance({
+    address: address,
+    query: {
+      enabled: Boolean(address),
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+    },
+  });
+
+  // Extract values from balance data
+  const nativeBalance = nativeBalanceData?.value ?? BigInt(0);
+  const formattedNativeBalance = nativeBalanceData ?? "0";
 
   useEffect(() => {
     if (!walletType) {
       // Only try auto-detection if type isn't manually set
       const savedType = localStorage.getItem('selectedWalletType');
       if (savedType === "smart" || savedType === "standard") {
-        setWalletType(savedType)
-        return
+        setWalletType(savedType);
+        return;
       }
       if (smartWalletClient) {
         setWalletType("smart");
@@ -156,5 +175,8 @@ export function useUnifiedWallet(): WalletHookResult {
     isConfirming,
     userBalance,
     refetchUserBalance,
+    nativeBalance,
+    formattedNativeBalance,
+    refetchNativeBalance,
   };
 }

@@ -6,12 +6,11 @@ import {
   type Address,
   parseUnits,
   encodeFunctionData,
+  Abi,
 } from "viem";
 import {
   useAccount,
   useReadContract,
-  useWriteContract,
-  useWaitForTransactionReceipt,
   usePublicClient,
   useWalletClient,
 } from "wagmi";
@@ -24,6 +23,8 @@ import { DashboardHeader } from "@/components/dashboard-header";
 import { useRouter } from "next/router";
 import { extendedERC20ABI } from "@/config/abi/ERC20";
 import axios from "axios";
+import { useContractInteraction } from "@/hooks/useContractInteraction";
+import { useUnifiedWallet } from "@/hooks/useUnifiedWallet";
 
 // Battle contract ABI
 const battleAbi = [
@@ -107,6 +108,7 @@ export default function BattleAdminPage() {
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
+  const { isSuccess } = useUnifiedWallet();
 
   // State variables
   const [tokenAPrice, setTokenAPrice] = useState("1.5");
@@ -225,19 +227,46 @@ export default function BattleAdminPage() {
     },
   }) as { data: number | undefined };
 
-  // Write contract hooks
-  const {
-    writeContract,
-    data: txHash,
-    isPending: isTransactionPending,
-    error: txError,
-  } = useWriteContract();
+  // Contract interaction hooks
+  const resolve = useContractInteraction({
+    to: battleAddress as Address,
+    abi: battleAbi as Abi,
+    functionName: "resolveBattle",
+    args: [parseEther(tokenAPrice), parseEther(tokenBPrice)],
+    description: "Resolve Battle",
+  });
 
-  // Wait for transaction receipt
-  const { isSuccess: isTransactionSuccess, isLoading: isWaitingForReceipt } =
-    useWaitForTransactionReceipt({
-      hash: txHash,
-    });
+  const forceResolve = useContractInteraction({
+    to: battleAddress as Address,
+    abi: battleAbi as Abi,
+    functionName: "forceResolveBattle",
+    args: [parseEther(tokenAPrice), parseEther(tokenBPrice)],
+    description: "Force Resolve Battle",
+  });
+
+  const approve = useContractInteraction({
+    to: losingTokenAddress as Address,
+    abi: extendedERC20ABI,
+    functionName: "approve",
+    args: [ONE_INCH_ROUTER_ADDRESS, BigInt(0)],
+    description: "Approve Tokens"
+  });
+
+  const transfer = useContractInteraction({
+    to: losingTokenAddress as Address,
+    abi: extendedERC20ABI,
+    functionName: "transfer",
+    args: [winningTokenAddress as Address, BigInt(0)],
+    description: "Transfer Tokens"
+  });
+
+  const depositWinnings = useContractInteraction({
+    to: battleAddress as Address,
+    abi: battleAbi as Abi,
+    functionName: "depositWinnings",
+    args: [parseEther(depositAmount || "0")],
+    description: "Deposit Winnings",
+  });
 
   // Update winning and losing tokens after battle resolution
   useEffect(() => {
@@ -270,7 +299,7 @@ export default function BattleAdminPage() {
 
   // Handle transaction results
   useEffect(() => {
-    if (isTransactionSuccess) {
+    if (isSuccess) {
       toast.success("Transaction successful!");
       // Reset swap approval status if it was a successful swap
       if (isSwapping) {
@@ -278,15 +307,7 @@ export default function BattleAdminPage() {
         setIsSwapping(false);
       }
     }
-
-    if (txError) {
-      setError(txError.message);
-      toast.error("Transaction failed: " + txError.message);
-      if (isSwapping) {
-        setIsSwapping(false);
-      }
-    }
-  }, [isTransactionSuccess, txError, isSwapping]);
+  }, [isSuccess, isSwapping]);
 
   // Handlers
   const handleResolveBattle = () => {
@@ -296,10 +317,7 @@ export default function BattleAdminPage() {
     }
 
     setError("");
-    writeContract({
-      address: battleAddress as Address,
-      abi: battleAbi,
-      functionName: "resolveBattle",
+    resolve.execute({
       args: [parseEther(tokenAPrice), parseEther(tokenBPrice)],
     });
   };
@@ -311,10 +329,7 @@ export default function BattleAdminPage() {
     }
 
     setError("");
-    writeContract({
-      address: battleAddress as Address,
-      abi: battleAbi,
-      functionName: "forceResolveBattle",
+    forceResolve.execute({
       args: [parseEther(tokenAPrice), parseEther(tokenBPrice)],
     });
   };
@@ -326,10 +341,7 @@ export default function BattleAdminPage() {
     }
 
     setError("");
-    writeContract({
-      address: battleAddress as Address,
-      abi: battleAbi,
-      functionName: "depositWinnings",
+    depositWinnings.execute({
       args: [parseEther(depositAmount)],
     });
   };
@@ -338,7 +350,7 @@ export default function BattleAdminPage() {
   useEffect(() => {
     const fetchTokenPrice = async () => {
       if (!tokenAAddress || !tokenBAddress) return;
-      
+
       try {
         const response = await axios.get("/api/get-token-prices", {
           params: {
@@ -355,7 +367,7 @@ export default function BattleAdminPage() {
         console.error("Error fetching token prices:", error);
       }
     };
-    
+
     fetchTokenPrice();
   }, [tokenAAddress, tokenBAddress]);
 
@@ -374,10 +386,13 @@ export default function BattleAdminPage() {
 
     try {
       toast.info("Fetching swap data from 1inch API...");
-      
+
       // Calculate amount with proper decimals
-      const fromTokenAmount = parseUnits(swapAmount, losingTokenDecimals).toString();
-      
+      const fromTokenAmount = parseUnits(
+        swapAmount,
+        losingTokenDecimals,
+      ).toString();
+
       // Call your backend API to get the swap data
       const response = await axios.get("/api/get-swap-data", {
         params: {
@@ -387,11 +402,11 @@ export default function BattleAdminPage() {
           fromAddress: address,
         },
       });
-      console.log("READSPONSE: ", response.data)
+      console.log("RESPONSE: ", response.data);
 
       // Get the tx data from the response
       const { tx } = response.data;
-      
+
       if (tx && tx.data) {
         setSwapData(tx.data);
         toast.success("Swap data fetched successfully");
@@ -416,10 +431,7 @@ export default function BattleAdminPage() {
     const decimals = losingTokenDecimals || 18;
     const amountToSwap = parseUnits(swapAmount, decimals);
 
-    writeContract({
-      address: losingTokenAddress,
-      abi: extendedERC20ABI,
-      functionName: "approve",
+    approve.execute({
       args: [ONE_INCH_ROUTER_ADDRESS, amountToSwap],
     });
 
@@ -434,14 +446,14 @@ export default function BattleAdminPage() {
         toast.error("Swap data or wallet client not available");
         return;
       }
-      
+
       setSwapData(newSwapData);
     }
 
     try {
       setIsSwapping(true);
       toast.info("Executing swap...");
-      
+
       // Prepare transaction data for the 1inch router
       const txData = {
         to: ONE_INCH_ROUTER_ADDRESS,
@@ -451,10 +463,10 @@ export default function BattleAdminPage() {
 
       // Send the transaction
       const hash = await walletClient.sendTransaction(txData);
-      
+
       // Track the transaction for success/failure
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      
+
       if (receipt.status === "success") {
         toast.success("Swap completed successfully!");
         setIsSwapApproved(false);
@@ -485,14 +497,9 @@ export default function BattleAdminPage() {
     const decimals = losingTokenDecimals || 18;
     const amountToSwap = parseUnits(swapAmount, decimals);
 
-    writeContract({
-      address: losingTokenAddress,
-      abi: extendedERC20ABI,
-      functionName: "transfer",
+    transfer.execute({
       args: [winningTokenAddress, amountToSwap],
     });
-
-    toast.success("Tokens transferred");
   };
 
   const handleUseForDeposit = () => {
@@ -594,13 +601,12 @@ export default function BattleAdminPage() {
                     onClick={handleResolveBattle}
                     disabled={
                       !!battleResolved ||
-                      isTransactionPending ||
-                      isWaitingForReceipt ||
+                      resolve.isLoading ||
                       !tokenAPrice ||
                       !tokenBPrice
                     }
                   >
-                    {isTransactionPending || isWaitingForReceipt
+                    {resolve.isLoading
                       ? "Processing..."
                       : "Resolve Battle"}
                   </Button>
@@ -609,13 +615,12 @@ export default function BattleAdminPage() {
                     variant="outline"
                     disabled={
                       !!battleResolved ||
-                      isTransactionPending ||
-                      isWaitingForReceipt ||
+                      forceResolve.isLoading ||
                       !tokenAPrice ||
                       !tokenBPrice
                     }
                   >
-                    {isTransactionPending || isWaitingForReceipt
+                    {forceResolve.isLoading
                       ? "Processing..."
                       : "Force Resolve"}
                   </Button>
@@ -671,11 +676,10 @@ export default function BattleAdminPage() {
                       onClick={handleManualTransfer}
                       disabled={
                         !swapAmount ||
-                        isTransactionPending ||
-                        isWaitingForReceipt
+                        transfer.isLoading
                       }
                     >
-                      {isTransactionPending || isWaitingForReceipt
+                      {transfer.isLoading
                         ? "Processing..."
                         : "Transfer Tokens"}
                     </Button>
@@ -685,30 +689,27 @@ export default function BattleAdminPage() {
                         onClick={handleApproveTokens}
                         disabled={
                           !swapAmount ||
-                          isTransactionPending ||
-                          isWaitingForReceipt ||
+                          approve.isLoading ||
                           isSwapApproved
                         }
                       >
-                        {isTransactionPending || isWaitingForReceipt
+                        {approve.isLoading
                           ? "Processing..."
                           : isSwapApproved
                             ? "Approved"
                             : "Approve Tokens"}
                       </Button>
-                      
+
                       {isSwapApproved && (
                         <Button
                           onClick={handleSwapTokens}
                           disabled={
                             !swapAmount ||
-                            isTransactionPending ||
-                            isWaitingForReceipt ||
                             isSwapping
                           }
                           className="ml-2"
                         >
-                          {isTransactionPending || isWaitingForReceipt || isSwapping
+                          {isSwapping
                             ? "Processing..."
                             : "Swap Tokens"}
                         </Button>
@@ -762,12 +763,11 @@ export default function BattleAdminPage() {
                   <Button
                     onClick={handleDepositWinnings}
                     disabled={
-                      isTransactionPending ||
-                      isWaitingForReceipt ||
+                      depositWinnings.isLoading ||
                       !depositAmount
                     }
                   >
-                    {isTransactionPending || isWaitingForReceipt
+                    {depositWinnings.isLoading
                       ? "Processing..."
                       : "Deposit Winnings"}
                   </Button>
