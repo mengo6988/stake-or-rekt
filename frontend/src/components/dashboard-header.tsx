@@ -33,13 +33,6 @@ export function DashboardHeader() {
           <Link href="/" className="flex items-center gap-2">
             <span className="text-4xl font-black">Stake-or-Rekt</span>
           </Link>
-          <nav className="hidden md:flex items-center gap-6 ml-6">
-            <Link href="/active-battles" 
-              className={cn("text-sm font-medium hover:text-foreground transition-colors", !isBattle && "text-muted-foreground" )}
-              >
-              Active Battles
-            </Link>
-          </nav>
         </div>
         <div className="flex items-center gap-4">
 
