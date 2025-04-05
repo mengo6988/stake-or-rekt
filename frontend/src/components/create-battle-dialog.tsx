@@ -135,10 +135,37 @@ export function CreateBattleDialog({
   // Get the created battle address from transaction receipt when confirmed
   useEffect(() => {
     const getBattleAddressFromTx = async () => {
+      console.log("Create Battle useEffect triggered");
+      console.log("isConfirmed:", isConfirmed);
+      console.log("txHash:", txHash);
+      console.log("onCreateBattle:", onCreateBattle);
+      console.log("tokenA:", tokenA);
+      console.log("tokenB:", tokenB);
+
       if (isConfirmed && txHash && onCreateBattle && tokenA && tokenB) {
         try {
+          // Attempt to get the battle address from the transaction receipt
+          const receipt = await (window as any).ethereum.request({
+            method: "eth_getTransactionReceipt",
+            params: [txHash],
+          });
+
+          console.log("Transaction Receipt:", receipt);
+
+          // Extract the battle address from the logs (assuming the first log contains the address)
+          const battleAddress = receipt.logs[0]?.address || "";
+
           const durationInSeconds = calculateDurationInSeconds();
-          onCreateBattle(tokenA, tokenB, durationInSeconds);
+
+          console.log("Calling onCreateBattle with:", {
+            tokenA,
+            tokenB,
+            durationInSeconds,
+            battleAddress,
+          });
+
+          // Call the callback with the battle address
+          onCreateBattle(tokenA, tokenB, durationInSeconds, battleAddress);
 
           toast.success("Battle created successfully!");
 
@@ -146,9 +173,9 @@ export function CreateBattleDialog({
           resetForm();
         } catch (err) {
           console.error("Error getting transaction receipt:", err);
-          toast.success("Battle created, but couldn't verify details");
+          toast.error("Failed to create battle. Please try again.");
 
-          // Still call callback and reset form on best effort
+          // Fallback with minimal information
           const durationInSeconds = calculateDurationInSeconds();
           onCreateBattle(tokenA, tokenB, durationInSeconds);
           resetForm();
@@ -156,8 +183,10 @@ export function CreateBattleDialog({
       }
     };
 
-    getBattleAddressFromTx();
-  }, [isConfirmed, txHash]);
+    if (isConfirmed) {
+      getBattleAddressFromTx();
+    }
+  }, [isConfirmed, txHash, onCreateBattle, tokenA, tokenB]);
 
   // Show errors via toast
   if (error || confirmError) {
@@ -179,7 +208,7 @@ export function CreateBattleDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] bg-background border-none">
+      <DialogContent className="sm:max-w-[500px] bg-[#171725] text-white border-none">
         <DialogHeader>
           <DialogTitle className="text-xl flex items-center gap-2">
             <Swords className="h-5 w-5" />
@@ -274,7 +303,7 @@ export function CreateBattleDialog({
           <Button
             variant="outline"
             onClick={handleClose}
-            className="hover:bg-red-500 hover:font-bold hover:border-black"
+            className="hover:bg-red-500 hover:font-bold hover:border-black bg-[#171725]"
             disabled={isPending || isConfirming}
           >
             Cancel
@@ -284,7 +313,7 @@ export function CreateBattleDialog({
               !isFormValid() || isPending || isConfirming || isConfirmed
             }
             onClick={handleCreateBattle}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            className="bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
           >
             {isPending || isConfirming ? (
               <>
