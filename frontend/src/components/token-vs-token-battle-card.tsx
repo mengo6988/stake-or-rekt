@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   useAccount,
   useReadContract,
@@ -21,6 +21,7 @@ import { toast } from "sonner";
 // Import the necessary ABIs
 import { battleAbi } from "@/config/abi/Battle";
 import { extendedERC20ABI } from "@/config/abi/ERC20";
+import axios from "axios";
 
 interface TokenVsTokenBattleCardProps {
   battle: Battle;
@@ -34,6 +35,9 @@ export default function TokenVsTokenBattleCard({
   onJoinB,
 }: TokenVsTokenBattleCardProps) {
   const { address, isConnected } = useAccount();
+
+  const [tokenAPrice, setTokenAPrice] = useState(0);
+  const [tokenBPrice, setTokenBPrice] = useState(0);
 
   // Read user's token balances
   const { data: tokenABalance } = useReadContract({
@@ -91,6 +95,33 @@ export default function TokenVsTokenBattleCard({
     hash: stakeTokenBTxHash,
   });
 
+  useEffect(() => {
+
+    const fetchTokenPrice = async () => {
+      if (!battle.tokenA.address || !battle.tokenB.address) return;
+      
+      try {
+        console.log("tokanaddress: ", battle.tokenA.address)
+        console.log("tokanbddress: ", battle.tokenB.address)
+        const response = await axios.get("/api/get-token-prices", {
+          params: {
+            tokenAAddress: battle.tokenA.address,
+            tokenBAddress: battle.tokenB.address,
+          },
+        });
+
+        const { tokenAPrice, tokenBPrice } = response.data;
+
+        setTokenAPrice(tokenAPrice);
+        setTokenBPrice(tokenBPrice);
+      } catch (error) {
+        console.error("Error fetching token prices:", error);
+      }
+    };
+    
+    fetchTokenPrice();
+  }, [battle.tokenA.address, battle.tokenB.address])
+
   // Handle staking errors and successes
   useMemo(() => {
     if (stakeTokenAError) {
@@ -135,19 +166,20 @@ export default function TokenVsTokenBattleCard({
   };
 
   // Dollar value calculation
-  const calculateDollarValue = (amount: number, symbol: string) => {
-    const prices: Record<string, number> = {
-      ETH: 3500,
-      BTC: 62000,
-      USDC: 1,
-      TKNS: 2.5,
-      SOL: 145,
-      DOGE: 0.15,
-      SHIB: 0.00002,
-      DAI: 1,
-    };
-
-    const price = prices[symbol] || 0;
+  const calculateDollarValue = (amount: number, symbol: string, price: number) => {
+    // const prices: Record<string, number> = {
+    //   ETH: 3500,
+    //   BTC: 62000,
+    //   USDC: 1,
+    //   TKNS: 2.5,
+    //   SOL: 145,
+    //   DOGE: 0.15,
+    //   SHIB: 0.00002,
+    //   DAI: 1,
+    // };
+    //
+    // const price = prices[symbol] || 0;
+    // return 69
     return (amount * price).toLocaleString("en-US", {
       style: "currency",
       currency: "USD",
@@ -246,7 +278,8 @@ export default function TokenVsTokenBattleCard({
               <div className="text-xs text-muted-foreground">
                 {calculateDollarValue(
                   battle.tokenA.totalStaked,
-                  battle.tokenA.symbol
+                  battle.tokenA.symbol,
+                  tokenAPrice,
                 )}
               </div>
             </div>
@@ -291,7 +324,8 @@ export default function TokenVsTokenBattleCard({
               <div className="text-xs text-muted-foreground">
                 {calculateDollarValue(
                   battle.tokenB.totalStaked,
-                  battle.tokenB.symbol
+                  battle.tokenB.symbol,
+                  tokenBPrice,
                 )}
               </div>
             </div>
