@@ -22,9 +22,16 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Battle } from "@/types/battle";
-import { useAccount, useReadContract, useWriteContract } from "wagmi";
-import { Address, erc20Abi, formatUnits, parseUnits } from "viem";
 import { extendedERC20ABI } from "@/config/abi/ERC20";
+import { battleAbi } from "@/config/abi/Battle";
+import {
+  useAccount,
+  useReadContract,
+  useWaitForTransactionReceipt,
+  useWriteContract,
+} from "wagmi";
+import { Address, erc20Abi, formatUnits, parseUnits } from "viem";
+import { toast } from "sonner";
 
 interface BattleJoinDialogProps {
   open: boolean;
@@ -43,10 +50,12 @@ export function BattleJoinDialog({
     "tokenA" | "tokenB" | null
   >(initialSelectedToken);
   const account = useAccount();
+  const { address, isConnected } = useAccount();
 
   const [stakeAmount, setStakeAmount] = useState("");
   const [maxStakeAmount, setMaxStakeAmount] = useState(2500);
 
+  // Token Balance Contracts
   const { data: tokenABalance = BigInt(0) } = useReadContract({
     address: selectedBattle?.tokenA.address as Address,
     abi: erc20Abi,
@@ -71,13 +80,31 @@ export function BattleJoinDialog({
 
   const { writeContract: faucetTokenB } = useWriteContract();
 
-  useEffect(() => {
-    console.log("acc:", account.address);
-    console.log("a: ", selectedBattle?.tokenA.address);
-    console.log("b: ", selectedBattle?.tokenB.address);
-    console.log("balance a", tokenABalance);
-    console.log("balance b", tokenBBalance);
+  // Staking Contracts
+  const {
+    writeContract: stakeTokenWrite,
+    data: stakeTxHash,
+    error: stakeError,
+  } = useWriteContract();
+
+  const { writeContractAsync } = useWriteContract();
+
+  // Transaction Receipt
+  const { isSuccess: isStakeSuccess } = useWaitForTransactionReceipt({
+    hash: stakeTxHash,
   });
+
+  // Handle Stake Success/Error
+  useEffect(() => {
+    if (isStakeSuccess) {
+      toast.success("Successfully staked tokens!");
+      onOpenChange(false);
+    }
+    if (stakeError) {
+      toast.error(`Stake failed: ${stakeError.message}`);
+    }
+  }, [isStakeSuccess, stakeError, onOpenChange]);
+
   // Update selectedToken when initialSelectedToken changes
   useEffect(() => {
     setSelectedToken(initialSelectedToken);
@@ -105,7 +132,70 @@ export function BattleJoinDialog({
 
   // Handle MAX button click
   const handleMaxClick = () => {
-    setStakeAmount(maxStakeAmount.toString());
+    const currentBalance =
+      selectedToken === "tokenA" ? tokenABalance : tokenBBalance;
+    const formattedBalance = formatUnits(currentBalance, 18);
+    setStakeAmount(formattedBalance);
+  };
+
+  const handleStake = async () => {
+    if (!selectedBattle || !selectedToken || !address) {
+      toast.error("Please select a battle and token side");
+      return;
+    }
+
+    const amount = parseFloat(stakeAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("Invalid stake amount");
+      return;
+    }
+
+    const tokenAddress =
+      selectedToken === "tokenA"
+        ? selectedBattle.tokenA.address
+        : selectedBattle.tokenB.address;
+
+    try {
+      const stakeAmountWei = parseUnits(stakeAmount, 18);
+
+      await writeContractAsync({
+        address: tokenAddress as Address,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [selectedBattle.address as Address, stakeAmountWei],
+      });
+
+      // Then stake tokens
+      const stakeFunction =
+        selectedToken === "tokenA" ? "stakeTokenA" : "stakeTokenB";
+
+      await writeContractAsync({
+        address: selectedBattle.address as Address,
+        abi: battleAbi,
+        functionName: stakeFunction,
+        args: [stakeAmountWei],
+      });
+
+      setStakeAmount("");
+      onOpenChange(false);
+      toast.success("Successfully staked tokens!");
+    } catch (error: any) {
+      console.error("Stake process error:", error);
+
+      // More detailed error handling
+      let errorMessage = "Stake failed";
+      if (error.message) {
+        if (error.message.includes("insufficient balance")) {
+          errorMessage = "Insufficient token balance";
+        } else if (error.message.includes("user rejected")) {
+          errorMessage = "Transaction rejected by user";
+        } else if (error.message.includes("exceeds allowance")) {
+          errorMessage = "Token approval amount too low";
+        }
+      }
+
+      toast.error(errorMessage);
+    }
   };
 
   if (!selectedBattle) {
@@ -234,7 +324,7 @@ export function BattleJoinDialog({
                   Available:{" "}
                   {formatUnits(
                     selectedToken === "tokenA" ? tokenABalance : tokenBBalance,
-                    18,
+                    18
                   )}{" "}
                   {selectedToken === "tokenA"
                     ? selectedBattle.tokenA.symbol
@@ -395,7 +485,10 @@ export function BattleJoinDialog({
             Cancel
           </Button>
           <Button
-            disabled={!stakeAmount || parseFloat(stakeAmount) <= 0}
+            onClick={handleStake}
+            disabled={
+              !stakeAmount || parseFloat(stakeAmount) <= 0 || !isConnected
+            }
             className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             Join Battle
