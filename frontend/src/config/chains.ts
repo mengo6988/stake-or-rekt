@@ -36,8 +36,8 @@ export const basesepolia = {
 } as const satisfies Chain;
 
 export const localBase = {
-  id: 1337,
-  name: "Local Base",
+  id: 8453,
+  name: "Base",
   nativeCurrency: {
     decimals: 18,
     name: "Ether",

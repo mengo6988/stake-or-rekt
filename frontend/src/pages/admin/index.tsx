@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import axios from 'axios';
+import { DashboardHeader } from '@/components/dashboard-header';
 
 // Battle contract ABI
 const battleAbi = [
@@ -554,6 +555,7 @@ export default function BattleAdminPage() {
 
   return (
     <div className="container mx-auto p-4">
+      <DashboardHeader />
       <h1 className="text-3xl font-bold mb-6">Battle Admin Dashboard</h1>
 
       {!isConnected ? (

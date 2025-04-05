@@ -8,6 +8,7 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { arbitrum, base, mainnet, optimism, polygon } from "wagmi/chains";
 import { WagmiProvider } from "wagmi";
+import { localBase } from "@/config/chains";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,7 +22,7 @@ const queryClient = new QueryClient({
 const config = getDefaultConfig({
   appName: "My RainbowKit App",
   projectId: "YOUR_PROJECT_ID",
-  chains: [mainnet, polygon, optimism, arbitrum, base],
+  chains: [mainnet, polygon, optimism, arbitrum, localBase],
   ssr: true, // If your dApp uses server side rendering (SSR)
 });
 
