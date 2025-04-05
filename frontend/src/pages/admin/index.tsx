@@ -1,165 +1,195 @@
-import { useState, useEffect, useCallback } from 'react';
-import { parseEther, formatEther, formatUnits, type Address, parseUnits } from 'viem';
+import { useState, useEffect, useCallback } from "react";
+import {
+  parseEther,
+  formatEther,
+  formatUnits,
+  type Address,
+  parseUnits,
+} from "viem";
 import {
   useAccount,
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
-} from 'wagmi';
-import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import axios from 'axios';
-import { DashboardHeader } from '@/components/dashboard-header';
+} from "wagmi";
+import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import axios from "axios";
+import { DashboardHeader } from "@/components/dashboard-header";
+import { useRouter } from "next/router";
 
 // Battle contract ABI
 const battleAbi = [
   {
-    "inputs": [
-      {"internalType": "uint256", "name": "tokenAPrice", "type": "uint256"},
-      {"internalType": "uint256", "name": "tokenBPrice", "type": "uint256"}
+    inputs: [
+      { internalType: "uint256", name: "tokenAPrice", type: "uint256" },
+      { internalType: "uint256", name: "tokenBPrice", type: "uint256" },
     ],
-    "name": "forceResolveBattle",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: "forceResolveBattle",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    "inputs": [
-      {"internalType": "uint256", "name": "tokenAPrice", "type": "uint256"},
-      {"internalType": "uint256", "name": "tokenBPrice", "type": "uint256"}
+    inputs: [
+      { internalType: "uint256", name: "tokenAPrice", type: "uint256" },
+      { internalType: "uint256", name: "tokenBPrice", type: "uint256" },
     ],
-    "name": "resolveBattle",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: "resolveBattle",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    "inputs": [
-      {"internalType": "uint256", "name": "amount", "type": "uint256"}
-    ],
-    "name": "depositWinnings",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    inputs: [{ internalType: "uint256", name: "amount", type: "uint256" }],
+    name: "depositWinnings",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    "inputs": [],
-    "name": "winningToken",
-    "outputs": [{"internalType": "uint8", "name": "", "type": "uint8"}],
-    "stateMutability": "view",
-    "type": "function"
+    inputs: [],
+    name: "winningToken",
+    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [],
-    "name": "tokenA",
-    "outputs": [{"internalType": "contract IERC20", "name": "", "type": "address"}],
-    "stateMutability": "view",
-    "type": "function"
+    inputs: [],
+    name: "tokenA",
+    outputs: [{ internalType: "contract IERC20", name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [],
-    "name": "tokenB",
-    "outputs": [{"internalType": "contract IERC20", "name": "", "type": "address"}],
-    "stateMutability": "view",
-    "type": "function"
+    inputs: [],
+    name: "tokenB",
+    outputs: [{ internalType: "contract IERC20", name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [],
-    "name": "battleResolved",
-    "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
-    "stateMutability": "view",
-    "type": "function"
+    inputs: [],
+    name: "battleResolved",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [],
-    "name": "totalTokenAStaked",
-    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
+    inputs: [],
+    name: "totalTokenAStaked",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [],
-    "name": "totalTokenBStaked",
-    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  }
+    inputs: [],
+    name: "totalTokenBStaked",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
 ];
 
 // ERC20 ABI for approvals
 const erc20Abi = [
   {
-    "inputs": [
-      {"name": "spender", "type": "address"},
-      {"name": "amount", "type": "uint256"}
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" },
     ],
-    "name": "approve",
-    "outputs": [{"name": "", "type": "bool"}],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: "approve",
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    "inputs": [{"name": "account", "type": "address"}],
-    "name": "balanceOf",
-    "outputs": [{"name": "", "type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
+    inputs: [{ name: "account", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [],
-    "name": "decimals",
-    "outputs": [{"name": "", "type": "uint8"}],
-    "stateMutability": "view",
-    "type": "function"
+    inputs: [],
+    name: "decimals",
+    outputs: [{ name: "", type: "uint8" }],
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [],
-    "name": "symbol",
-    "outputs": [{"name": "", "type": "string"}],
-    "stateMutability": "view",
-    "type": "function"
-  }
+    inputs: [],
+    name: "symbol",
+    outputs: [{ name: "", type: "string" }],
+    stateMutability: "view",
+    type: "function",
+  },
 ];
 
 // 1inch Router ABI (partial)
 const oneInchAbi = [
   {
-    "inputs": [
-      {"internalType": "contract IAggregationExecutor", "name": "executor", "type": "address"},
+    inputs: [
       {
-        "components": [
-          {"internalType": "contract IERC20", "name": "srcToken", "type": "address"},
-          {"internalType": "contract IERC20", "name": "dstToken", "type": "address"},
-          {"internalType": "address payable", "name": "srcReceiver", "type": "address"},
-          {"internalType": "address payable", "name": "dstReceiver", "type": "address"},
-          {"internalType": "uint256", "name": "amount", "type": "uint256"},
-          {"internalType": "uint256", "name": "minReturnAmount", "type": "uint256"},
-          {"internalType": "uint256", "name": "flags", "type": "uint256"}
-        ],
-        "internalType": "struct GenericRouter.SwapDescription",
-        "name": "desc",
-        "type": "tuple"
+        internalType: "contract IAggregationExecutor",
+        name: "executor",
+        type: "address",
       },
-      {"internalType": "bytes", "name": "data", "type": "bytes"}
+      {
+        components: [
+          {
+            internalType: "contract IERC20",
+            name: "srcToken",
+            type: "address",
+          },
+          {
+            internalType: "contract IERC20",
+            name: "dstToken",
+            type: "address",
+          },
+          {
+            internalType: "address payable",
+            name: "srcReceiver",
+            type: "address",
+          },
+          {
+            internalType: "address payable",
+            name: "dstReceiver",
+            type: "address",
+          },
+          { internalType: "uint256", name: "amount", type: "uint256" },
+          { internalType: "uint256", name: "minReturnAmount", type: "uint256" },
+          { internalType: "uint256", name: "flags", type: "uint256" },
+        ],
+        internalType: "struct GenericRouter.SwapDescription",
+        name: "desc",
+        type: "tuple",
+      },
+      { internalType: "bytes", name: "data", type: "bytes" },
     ],
-    "name": "swap",
-    "outputs": [
-      {"internalType": "uint256", "name": "returnAmount", "type": "uint256"},
-      {"internalType": "uint256", "name": "spentAmount", "type": "uint256"}
+    name: "swap",
+    outputs: [
+      { internalType: "uint256", name: "returnAmount", type: "uint256" },
+      { internalType: "uint256", name: "spentAmount", type: "uint256" },
     ],
-    "stateMutability": "payable",
-    "type": "function"
-  }
+    stateMutability: "payable",
+    type: "function",
+  },
 ];
 
-const BATTLE_CONTRACT_ADDRESS = '0xYourBattleContractAddress' as Address; // Replace with actual address
-const ONE_INCH_ROUTER_ADDRESS = '0x6b5037B6DD465e9B547193b0E939E8e9Ba49AC1A' as Address; // Base Chain
+const BATTLE_CONTRACT_ADDRESS = "0xYourBattleContractAddress" as Address; // Replace with actual address
+const ONE_INCH_ROUTER_ADDRESS =
+  "0x111111125421cA6dc452d289314280a0f8842A65" as Address; // Base Chain
 
 export default function BattleAdminPage() {
+
+  const router = useRouter();
+
+  const {battleAddress} = router.query;
   const { address, isConnected } = useAccount();
 
   // State variables
@@ -171,21 +201,25 @@ export default function BattleAdminPage() {
   const [isLoadingSwapParams, setIsLoadingSwapParams] = useState(false);
   const [winningTokenSymbol, setWinningTokenSymbol] = useState("");
   const [losingTokenSymbol, setLosingTokenSymbol] = useState("");
-  const [losingTokenAddress, setLosingTokenAddress] = useState<Address | undefined>();
-  const [winningTokenAddress, setWinningTokenAddress] = useState<Address | undefined>();
+  const [losingTokenAddress, setLosingTokenAddress] = useState<
+    Address | undefined
+  >();
+  const [winningTokenAddress, setWinningTokenAddress] = useState<
+    Address | undefined
+  >();
   const [error, setError] = useState("");
 
   // Read contract data
   const { data: battleResolved } = useReadContract({
     address: BATTLE_CONTRACT_ADDRESS,
     abi: battleAbi,
-    functionName: 'battleResolved',
+    functionName: "battleResolved",
   }) as { data: boolean | undefined };
 
   const { data: winningTokenId } = useReadContract({
     address: BATTLE_CONTRACT_ADDRESS,
     abi: battleAbi,
-    functionName: 'winningToken',
+    functionName: "winningToken",
     query: {
       enabled: Boolean(battleResolved),
     },
@@ -194,32 +228,32 @@ export default function BattleAdminPage() {
   const { data: tokenAAddress } = useReadContract({
     address: BATTLE_CONTRACT_ADDRESS,
     abi: battleAbi,
-    functionName: 'tokenA',
+    functionName: "tokenA",
   }) as { data: Address | undefined };
 
   const { data: tokenBAddress } = useReadContract({
     address: BATTLE_CONTRACT_ADDRESS,
     abi: battleAbi,
-    functionName: 'tokenB',
+    functionName: "tokenB",
   }) as { data: Address | undefined };
 
   const { data: totalTokenAStaked } = useReadContract({
     address: BATTLE_CONTRACT_ADDRESS,
     abi: battleAbi,
-    functionName: 'totalTokenAStaked',
+    functionName: "totalTokenAStaked",
   }) as { data: bigint | undefined };
 
   const { data: totalTokenBStaked } = useReadContract({
     address: BATTLE_CONTRACT_ADDRESS,
     abi: battleAbi,
-    functionName: 'totalTokenBStaked',
+    functionName: "totalTokenBStaked",
   }) as { data: bigint | undefined };
 
   // Get token symbols
   const { data: tokenASymbol } = useReadContract({
     address: tokenAAddress as Address,
     abi: erc20Abi,
-    functionName: 'symbol',
+    functionName: "symbol",
     query: {
       enabled: Boolean(tokenAAddress),
     },
@@ -228,7 +262,7 @@ export default function BattleAdminPage() {
   const { data: tokenBSymbol } = useReadContract({
     address: tokenBAddress as Address,
     abi: erc20Abi,
-    functionName: 'symbol',
+    functionName: "symbol",
     query: {
       enabled: Boolean(tokenBAddress),
     },
@@ -238,7 +272,7 @@ export default function BattleAdminPage() {
   const { data: losingTokenBalance } = useReadContract({
     address: losingTokenAddress,
     abi: erc20Abi,
-    functionName: 'balanceOf',
+    functionName: "balanceOf",
     args: address ? [address] : undefined,
     query: {
       enabled: Boolean(losingTokenAddress && address),
@@ -248,7 +282,7 @@ export default function BattleAdminPage() {
   const { data: losingTokenDecimals } = useReadContract({
     address: losingTokenAddress,
     abi: erc20Abi,
-    functionName: 'decimals',
+    functionName: "decimals",
     query: {
       enabled: Boolean(losingTokenAddress),
     },
@@ -257,85 +291,132 @@ export default function BattleAdminPage() {
   const { data: winningTokenDecimals } = useReadContract({
     address: winningTokenAddress,
     abi: erc20Abi,
-    functionName: 'decimals',
+    functionName: "decimals",
     query: {
       enabled: Boolean(winningTokenAddress),
     },
   }) as { data: number | undefined };
 
   // Write contract hooks
-  const { 
+  const {
     writeContract: resolveBattleWrite,
     data: resolveTxHash,
     isPending: isResolvingBattle,
-    error: resolveError
+    error: resolveError,
   } = useWriteContract();
 
-  const { 
+  const {
     writeContract: forceResolveBattleWrite,
     data: forceResolveTxHash,
     isPending: isForceResolvingBattle,
-    error: forceResolveError
+    error: forceResolveError,
   } = useWriteContract();
 
-  const { 
+  const {
     writeContract: depositWinningsWrite,
     data: depositTxHash,
     isPending: isDepositingWinnings,
-    error: depositError
+    error: depositError,
   } = useWriteContract();
 
-  const { 
+  const {
     writeContract: approveTokenWrite,
     data: approveTxHash,
     isPending: isApprovingToken,
-    error: approveError
+    error: approveError,
   } = useWriteContract();
 
-  const { 
+  const {
     writeContract: executeSwapWrite,
     data: swapTxHash,
     isPending: isSwapping,
-    error: swapError
+    error: swapError,
   } = useWriteContract();
 
   // Wait for transaction results
-  const { isSuccess: isResolveSuccess } = useWaitForTransactionReceipt({ 
-    hash: resolveTxHash
+  const { isSuccess: isResolveSuccess } = useWaitForTransactionReceipt({
+    hash: resolveTxHash,
   });
 
-  const { isSuccess: isForceResolveSuccess } = useWaitForTransactionReceipt({ 
-    hash: forceResolveTxHash
+  const { isSuccess: isForceResolveSuccess } = useWaitForTransactionReceipt({
+    hash: forceResolveTxHash,
   });
 
-  const { isSuccess: isDepositSuccess } = useWaitForTransactionReceipt({ 
-    hash: depositTxHash
+  const { isSuccess: isDepositSuccess } = useWaitForTransactionReceipt({
+    hash: depositTxHash,
   });
 
-  const { isSuccess: isApproveSuccess } = useWaitForTransactionReceipt({ 
-    hash: approveTxHash
+  const { isSuccess: isApproveSuccess } = useWaitForTransactionReceipt({
+    hash: approveTxHash,
   });
 
-  const { isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({ 
-    hash: swapTxHash
+  const { isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({
+    hash: swapTxHash,
   });
 
   // Update winning and losing tokens after battle resolution
   useEffect(() => {
-    if (battleResolved && winningTokenId !== undefined && tokenAAddress && tokenBAddress) {
+    if (
+      battleResolved &&
+      winningTokenId !== undefined &&
+      tokenAAddress &&
+      tokenBAddress
+    ) {
       if (Number(winningTokenId) === 1) {
         setWinningTokenAddress(tokenAAddress);
         setLosingTokenAddress(tokenBAddress);
-        setWinningTokenSymbol(tokenASymbol || 'Token A');
-        setLosingTokenSymbol(tokenBSymbol || 'Token B');
+        setWinningTokenSymbol(tokenASymbol || "Token A");
+        setLosingTokenSymbol(tokenBSymbol || "Token B");
       } else if (Number(winningTokenId) === 2) {
         setWinningTokenAddress(tokenBAddress);
         setLosingTokenAddress(tokenAAddress);
-        setWinningTokenSymbol(tokenBSymbol || 'Token B');
-        setLosingTokenSymbol(tokenASymbol || 'Token A');
+        setWinningTokenSymbol(tokenBSymbol || "Token B");
+        setLosingTokenSymbol(tokenASymbol || "Token A");
       }
     }
-  }, [battleResolved, winningTokenId, tokenAAddress, tokenBAddress, tokenASymbol, tokenBSymbol]);
+  }, [
+    battleResolved,
+    winningTokenId,
+    tokenAAddress,
+    tokenBAddress,
+    tokenASymbol,
+    tokenBSymbol,
+  ]);
+
+  useEffect(() => {
+    async function fetchTokenPrices(
+      tokenAAddress: string,
+      tokenBAddress: string,
+      chainId = "8453",
+    ) {
+      try {
+        const response = await axios.get("/api/get-token-prices", {
+          params: {
+            tokenAAddress,
+            tokenBAddress,
+            chainId,
+          },
+        });
+
+        const { tokenAPrice, tokenBPrice} = response.data;
+
+        console.log("Token A Price:", tokenAPrice);
+        console.log("Token B Price:", tokenBPrice);
+        setTokenAPrice(tokenAPrice)
+        setTokenBPrice(tokenBPrice)
+
+        return { tokenAPrice, tokenBPrice };
+      } catch (error: any) {
+        console.error(
+          "Error fetching prices:",
+          error?.response?.data?.error || error.message,
+        );
+        return null;
+      }
+    }
+
+    fetchTokenPrices("0xAC1Bd2486aAf3B5C0fc3Fd868558b082a531B2B4", "0x532f27101965dd16442E59d40670FaF5eBB142E4")
+  }, []);
 
   // Handle transaction results
   useEffect(() => {
@@ -356,9 +437,10 @@ export default function BattleAdminPage() {
         executeSwapWrite({
           address: swapParams.tx.to as Address,
           abi: oneInchAbi,
-          functionName: 'swap',
+          functionName: "swap",
           args: [
-            swapParams.tx.data.executor || "0x0000000000000000000000000000000000000000",
+            swapParams.tx.data.executor ||
+              "0x0000000000000000000000000000000000000000",
             swapParams.tx.data.desc || {
               srcToken: losingTokenAddress,
               dstToken: winningTokenAddress,
@@ -366,9 +448,9 @@ export default function BattleAdminPage() {
               dstReceiver: address,
               amount: BigInt(swapParams.fromTokenAmount),
               minReturnAmount: BigInt(swapParams.toTokenAmount),
-              flags: BigInt(0)
+              flags: BigInt(0),
             },
-            swapParams.tx.data.data || "0x"
+            swapParams.tx.data.data || "0x",
           ],
           value: BigInt(swapParams.tx.value || 0),
         });
@@ -380,16 +462,16 @@ export default function BattleAdminPage() {
       setSwapParams(null);
     }
   }, [
-    isResolveSuccess, 
-    isForceResolveSuccess, 
-    isDepositSuccess, 
-    isApproveSuccess, 
-    isSwapSuccess, 
-    swapParams, 
+    isResolveSuccess,
+    isForceResolveSuccess,
+    isDepositSuccess,
+    isApproveSuccess,
+    isSwapSuccess,
+    swapParams,
     address,
     losingTokenAddress,
     winningTokenAddress,
-    executeSwapWrite
+    executeSwapWrite,
   ]);
 
   // Handle errors
@@ -412,7 +494,7 @@ export default function BattleAdminPage() {
       resolveBattleWrite({
         address: BATTLE_CONTRACT_ADDRESS,
         abi: battleAbi,
-        functionName: 'resolveBattle',
+        functionName: "resolveBattle",
         args: [parseEther(tokenAPrice), parseEther(tokenBPrice)],
       });
     } catch (error: any) {
@@ -431,7 +513,7 @@ export default function BattleAdminPage() {
       forceResolveBattleWrite({
         address: BATTLE_CONTRACT_ADDRESS,
         abi: battleAbi,
-        functionName: 'forceResolveBattle',
+        functionName: "forceResolveBattle",
         args: [parseEther(tokenAPrice), parseEther(tokenBPrice)],
       });
     } catch (error: any) {
@@ -450,7 +532,7 @@ export default function BattleAdminPage() {
       depositWinningsWrite({
         address: BATTLE_CONTRACT_ADDRESS,
         abi: battleAbi,
-        functionName: 'depositWinnings',
+        functionName: "depositWinnings",
         args: [parseEther(depositAmount)],
       });
     } catch (error: any) {
@@ -473,7 +555,7 @@ export default function BattleAdminPage() {
       const amount = parseUnits(swapAmount, Number(decimals)).toString();
 
       // Call your backend API to fetch swap parameters from 1inch
-      const response = await axios.post('/api/get-1inch-swap', {
+      const response = await axios.post("/api/get-1inch-swap", {
         fromTokenAddress: losingTokenAddress,
         toTokenAddress: winningTokenAddress,
         amount: amount,
@@ -484,7 +566,7 @@ export default function BattleAdminPage() {
         setSwapParams(response.data);
         toast.success("Swap parameters fetched successfully");
       } else {
-        throw new Error('Failed to fetch swap parameters');
+        throw new Error("Failed to fetch swap parameters");
       }
     } catch (error: any) {
       console.error("Error fetching swap params:", error);
@@ -506,8 +588,11 @@ export default function BattleAdminPage() {
       approveTokenWrite({
         address: losingTokenAddress as Address,
         abi: erc20Abi,
-        functionName: 'approve',
-        args: [ONE_INCH_ROUTER_ADDRESS, BigInt(swapParams.tx.value || swapParams.fromTokenAmount)],
+        functionName: "approve",
+        args: [
+          ONE_INCH_ROUTER_ADDRESS,
+          BigInt(swapParams.tx.value || swapParams.fromTokenAmount),
+        ],
       });
     } catch (error: any) {
       console.error("Error approving tokens:", error);
@@ -530,9 +615,10 @@ export default function BattleAdminPage() {
         executeSwapWrite({
           address: swapParams.tx.to as Address,
           abi: oneInchAbi,
-          functionName: 'swap',
+          functionName: "swap",
           args: [
-            swapParams.tx.data.executor || "0x0000000000000000000000000000000000000000",
+            swapParams.tx.data.executor ||
+              "0x0000000000000000000000000000000000000000",
             swapParams.tx.data.desc || {
               srcToken: losingTokenAddress,
               dstToken: winningTokenAddress,
@@ -540,9 +626,9 @@ export default function BattleAdminPage() {
               dstReceiver: address,
               amount: BigInt(swapParams.fromTokenAmount),
               minReturnAmount: BigInt(swapParams.toTokenAmount),
-              flags: BigInt(0)
+              flags: BigInt(0),
             },
-            swapParams.tx.data.data || "0x"
+            swapParams.tx.data.data || "0x",
           ],
           value: BigInt(swapParams.tx.value || 0),
         });
@@ -560,7 +646,9 @@ export default function BattleAdminPage() {
 
       {!isConnected ? (
         <div className="text-center p-8">
-          <h2 className="text-xl">Please connect your wallet to access admin functions</h2>
+          <h2 className="text-xl">
+            Please connect your wallet to access admin functions
+          </h2>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -571,21 +659,31 @@ export default function BattleAdminPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                  <p> <span className="font-semibold">Address: </span>{battleAddress} </p>
                 <div>
-                  <p className="font-semibold">Status: {battleResolved ? 'Resolved' : 'In Progress'}</p>
+                  <p className="font-semibold">
+                    Status: {battleResolved ? "Resolved" : "In Progress"}
+                  </p>
                   {battleResolved && winningTokenId !== undefined && (
                     <p className="font-semibold">
-                      Winner: {Number(winningTokenId) === 1 
-                        ? (tokenASymbol || 'Token A') 
-                        : Number(winningTokenId) === 2 
-                          ? (tokenBSymbol || 'Token B') 
-                          : 'Tie'}
+                      Winner:{" "}
+                      {Number(winningTokenId) === 1
+                        ? tokenASymbol || "Token A"
+                        : Number(winningTokenId) === 2
+                          ? tokenBSymbol || "Token B"
+                          : "Tie"}
                     </p>
                   )}
                 </div>
                 <div>
-                  <p>{tokenASymbol || 'Token A'} Staked: {totalTokenAStaked ? formatEther(totalTokenAStaked) : '0'}</p>
-                  <p>{tokenBSymbol || 'Token B'} Staked: {totalTokenBStaked ? formatEther(totalTokenBStaked) : '0'}</p>
+                  <p>
+                    {tokenASymbol || "Token A"} Staked:{" "}
+                    {totalTokenAStaked ? formatEther(totalTokenAStaked) : "0"}
+                  </p>
+                  <p>
+                    {tokenBSymbol || "Token B"} Staked:{" "}
+                    {totalTokenBStaked ? formatEther(totalTokenBStaked) : "0"}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -619,18 +717,28 @@ export default function BattleAdminPage() {
                   />
                 </div>
                 <div className="flex space-x-2">
-                  <Button 
-                    onClick={handleResolveBattle} 
-                    disabled={!!battleResolved || isResolvingBattle || !tokenAPrice || !tokenBPrice}
+                  <Button
+                    onClick={handleResolveBattle}
+                    disabled={
+                      !!battleResolved ||
+                      isResolvingBattle ||
+                      !tokenAPrice ||
+                      !tokenBPrice
+                    }
                   >
-                    {isResolvingBattle ? 'Resolving...' : 'Resolve Battle'}
+                    {isResolvingBattle ? "Resolving..." : "Resolve Battle"}
                   </Button>
-                  <Button 
-                    onClick={handleForceResolveBattle} 
-                    variant="outline" 
-                    disabled={!!battleResolved || isForceResolvingBattle || !tokenAPrice || !tokenBPrice}
+                  <Button
+                    onClick={handleForceResolveBattle}
+                    variant="outline"
+                    disabled={
+                      !!battleResolved ||
+                      isForceResolvingBattle ||
+                      !tokenAPrice ||
+                      !tokenBPrice
+                    }
                   >
-                    {isForceResolvingBattle ? 'Forcing...' : 'Force Resolve'}
+                    {isForceResolvingBattle ? "Forcing..." : "Force Resolve"}
                   </Button>
                 </div>
               </div>
@@ -646,7 +754,9 @@ export default function BattleAdminPage() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="depositAmount">Deposit Amount ({winningTokenSymbol})</Label>
+                    <Label htmlFor="depositAmount">
+                      Deposit Amount ({winningTokenSymbol})
+                    </Label>
                     <Input
                       id="depositAmount"
                       value={depositAmount}
@@ -654,11 +764,13 @@ export default function BattleAdminPage() {
                       placeholder="Enter Amount to Deposit"
                     />
                   </div>
-                  <Button 
-                    onClick={handleDepositWinnings} 
+                  <Button
+                    onClick={handleDepositWinnings}
                     disabled={isDepositingWinnings || !depositAmount}
                   >
-                    {isDepositingWinnings ? 'Depositing...' : 'Deposit Winnings'}
+                    {isDepositingWinnings
+                      ? "Depositing..."
+                      : "Deposit Winnings"}
                   </Button>
                 </div>
               </CardContent>
@@ -677,12 +789,19 @@ export default function BattleAdminPage() {
                     <p>Convert losing tokens to winning tokens using 1inch</p>
                     {losingTokenBalance && losingTokenDecimals && (
                       <p className="text-sm text-gray-500 mt-1">
-                        You have: {formatUnits(losingTokenBalance, Number(losingTokenDecimals))} {losingTokenSymbol}
+                        You have:{" "}
+                        {formatUnits(
+                          losingTokenBalance,
+                          Number(losingTokenDecimals),
+                        )}{" "}
+                        {losingTokenSymbol}
                       </p>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="swapAmount">Amount to Swap ({losingTokenSymbol})</Label>
+                    <Label htmlFor="swapAmount">
+                      Amount to Swap ({losingTokenSymbol})
+                    </Label>
                     <Input
                       id="swapAmount"
                       value={swapAmount}
@@ -691,24 +810,33 @@ export default function BattleAdminPage() {
                     />
                   </div>
                   <div className="flex space-x-2">
-                    <Button 
+                    <Button
                       onClick={fetchSwapParams}
                       disabled={isLoadingSwapParams || !swapAmount}
                       variant="outline"
                     >
-                      {isLoadingSwapParams ? 'Loading...' : 'Get Swap Data'}
+                      {isLoadingSwapParams ? "Loading..." : "Get Swap Data"}
                     </Button>
-                    <Button 
+                    <Button
                       onClick={handleSwap}
                       disabled={!swapParams || isApprovingToken || isSwapping}
                     >
-                      {isApprovingToken ? 'Approving...' : isSwapping ? 'Swapping...' : 'Swap'}
+                      {isApprovingToken
+                        ? "Approving..."
+                        : isSwapping
+                          ? "Swapping..."
+                          : "Swap"}
                     </Button>
                   </div>
                   {swapParams && winningTokenDecimals !== undefined && (
                     <div className="mt-4">
                       <p className="text-sm">
-                        You will receive approximately: {formatUnits(BigInt(swapParams.toTokenAmount), winningTokenDecimals)} {winningTokenSymbol}
+                        You will receive approximately:{" "}
+                        {formatUnits(
+                          BigInt(swapParams.toTokenAmount),
+                          winningTokenDecimals,
+                        )}{" "}
+                        {winningTokenSymbol}
                       </p>
                     </div>
                   )}
