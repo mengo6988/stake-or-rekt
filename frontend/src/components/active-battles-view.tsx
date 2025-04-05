@@ -216,6 +216,7 @@ export function ActiveBattlesView() {
               createdAt: "Unknown", // This is hardcoded as it's not easily available on-chain
               difficulty,
               tokenA: {
+                address: tokenAAddress,
                 symbol: tokenASymbol,
                 stakeAmount: 0, // Hardcoded, as this is user-specific
                 totalStaked: Number(formattedTokenAStaked),
@@ -223,6 +224,7 @@ export function ActiveBattlesView() {
                 participants_list: [], // Hardcoded, as this is not tracked on-chain
               },
               tokenB: {
+                address: tokenBAddress,
                 symbol: tokenBSymbol,
                 stakeAmount: 0, // Hardcoded, as this is user-specific
                 totalStaked: Number(formattedTokenBStaked),

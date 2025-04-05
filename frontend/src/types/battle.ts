@@ -10,6 +10,7 @@ export interface Battle {
   difficulty: "low" | "medium" | "high" | "extreme";
   tokenA: {
     symbol: string;
+    address: string;
     stakeAmount: number;
     totalStaked: number;
     participants: number;
@@ -21,6 +22,7 @@ export interface Battle {
   };
   tokenB: {
     symbol: string;
+    address: string;
     stakeAmount: number;
     totalStaked: number;
     participants: number;
