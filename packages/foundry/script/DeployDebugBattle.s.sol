@@ -3,7 +3,8 @@ pragma solidity ^0.8.19;
 
 import "./DeployHelpers.s.sol";
 import "../contracts/Battle.sol";
-import "../contracts/MockERC20.sol";
+import "../contracts/MockERC20A.sol";
+import "../contracts/MockERC20B.sol";
 
 /**
  * @notice Debug deployment script for Battle contract
@@ -16,8 +17,8 @@ import "../contracts/MockERC20.sol";
 contract DeployDebugBattle is ScaffoldETHDeploy {
     function run() external ScaffoldEthDeployerRunner {
         // Deploy mock tokens for testing
-        MockERC20 mockTokenA = new MockERC20("DebugMemeA", "DMEMA", 18);
-        MockERC20 mockTokenB = new MockERC20("DebugMemeB", "DMEMB", 18);
+        MockERC20A mockTokenA = new MockERC20A("DebugMemeA", "DMEMA", 18);
+        MockERC20B mockTokenB = new MockERC20B("DebugMemeB", "DMEMB", 18);
 
         // Mint some tokens to the deployer for testing
         mockTokenA.mint(deployer, 1000000 * 10 ** 18);

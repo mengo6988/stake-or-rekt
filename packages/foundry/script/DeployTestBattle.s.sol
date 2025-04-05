@@ -4,7 +4,8 @@ pragma solidity ^0.8.19;
 import "./DeployHelpers.s.sol";
 import "../contracts/BattleFactory.sol";
 import "../contracts/Battle.sol";
-import "../contracts/MockERC20.sol";
+import "../contracts/MockERC20A.sol";
+import "../contracts/MockERC20B.sol";
 
 /**
  * @notice Deployment script that demonstrates the COMPLETE flow:
@@ -19,8 +20,8 @@ contract DeployTestBattle is ScaffoldETHDeploy {
         BattleFactory battleFactory = new BattleFactory();
 
         // Step 2: Deploy mock tokens for testing
-        MockERC20 mockTokenA = new MockERC20("TestMemeA", "TMEMA", 18);
-        MockERC20 mockTokenB = new MockERC20("TestMemeB", "TMEMB", 18);
+        MockERC20A mockTokenA = new MockERC20A("TestMemeA", "TMEMA", 18);
+        MockERC20B mockTokenB = new MockERC20B("TestMemeB", "TMEMB", 18);
 
         // Mint some tokens to the deployer for testing
         mockTokenA.mint(deployer, 1000000 * 10 ** 18);

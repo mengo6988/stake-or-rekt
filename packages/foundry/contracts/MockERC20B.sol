@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * @title MockERC20
  * @dev A simple ERC20 token for testing purposes
  */
-contract MockERC20 is ERC20, Ownable {
+contract MockERC20B is ERC20, Ownable {
     uint8 private _decimals;
 
     constructor(
@@ -54,5 +54,9 @@ contract MockERC20 is ERC20, Ownable {
             _approve(account, _msgSender(), currentAllowance - amount);
         }
         _burn(account, amount);
+    }
+
+    function faucet(uint256 amount) external {
+        _mint(msg.sender, amount);
     }
 }
