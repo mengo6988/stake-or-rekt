@@ -11,7 +11,7 @@ export default function ActiveBattlesPage() {
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-background to-background/90">
       <DashboardHeader />
-      <main className="flex-1 container py-6">
+      <main className="flex-1 py-6">
         <div className="max-w-6xl w-full mx-auto">
           <h1 className="font-semibold text-3xl mb-6">Active Battles</h1>
           <ActiveBattlesView />

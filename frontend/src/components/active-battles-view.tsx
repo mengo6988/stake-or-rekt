@@ -25,6 +25,8 @@ import TokenVsTokenBattleCard from "./token-vs-token-battle-card";
 import { BattleJoinDialog } from "@/components/battle-join-dialog";
 import { battles } from "@/data/battle";
 import { CreateBattleDialog } from "./create-battle-dialog";
+import { type Address } from "viem";
+import toast from "react-hot-toast";
 
 export function ActiveBattlesView() {
   const [sortBy, setSortBy] = useState("timeLeft");
@@ -36,11 +38,16 @@ export function ActiveBattlesView() {
   >(null);
   const [createBattle, setCreateBattle] = useState(false);
 
+  // Get the factory address from environment variable
+  const battleFactoryAddress =
+    (process.env.NEXT_PUBLIC_BATTLE_FACTORY_ADDRESS as Address) ||
+    ("0x0000000000000000000000000000000000000000" as Address);
+
   // Calculate dollar value based on token price
   const calculateDollarValue = (amount: number, symbol: string) => {
     // In a real implementation, you would use current market prices
     // This is a placeholder implementation
-    const prices = {
+    const prices: Record<string, number> = {
       ETH: 3500,
       BTC: 62000,
       USDC: 1,
@@ -48,20 +55,45 @@ export function ActiveBattlesView() {
       SOL: 145,
       DOGE: 0.15,
       SHIB: 0.00002,
-      DAI: 1
+      DAI: 1,
     };
-    
-    const price = prices[symbol] || 0;
-    return (amount * price).toLocaleString('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0
+
+    // Fix the type error by using a type guard or optional chaining
+    const price = prices[symbol] ?? 0; // Use nullish coalescing for safety
+    return (amount * price).toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
     });
   };
 
-  const onCreateBattle = (tokenA: string, tokenB: string, durationInSeconds: number) => {
-    console.log(tokenA, tokenB, durationInSeconds);
-  }
+  const onCreateBattle = (
+    tokenA: string,
+    tokenB: string,
+    durationInSeconds: number,
+    battleAddress?: string
+  ) => {
+    console.log(
+      `Battle created between ${tokenA} and ${tokenB} for ${durationInSeconds}s`
+    );
+
+    if (battleAddress) {
+      console.log(`New battle deployed at: ${battleAddress}`);
+      // 1. Refresh the battles list
+      // 2. Highlight the new battle
+      // 3. Show a more detailed success message
+
+      // Example toast notification
+      toast.success(
+        <div>
+          <div>Battle created successfully!</div>
+          <div className="text-xs mt-1 font-mono break-all">
+            {battleAddress}
+          </div>
+        </div>
+      );
+    }
+  };
 
   // Filter and sort battles
   const filteredBattles = battles
@@ -116,7 +148,9 @@ export function ActiveBattlesView() {
   // Format contract address for display
   const formatAddress = (address: string) => {
     if (address.length < 20) return address;
-    return `${address.substring(0, 10)}...${address.substring(address.length - 8)}`;
+    return `${address.substring(0, 10)}...${address.substring(
+      address.length - 8
+    )}`;
   };
 
   return (
@@ -139,7 +173,11 @@ export function ActiveBattlesView() {
                 <ArrowUpDown className="h-4 w-4" />
                 Sort
               </Button>
-              <Button size="sm" className="gap-1" onClick={() => setCreateBattle(true)}>
+              <Button
+                size="sm"
+                className="gap-1"
+                onClick={() => setCreateBattle(true)}
+              >
                 <Swords className="h-4 w-4" />
                 Create Battle
               </Button>
@@ -240,10 +278,10 @@ export function ActiveBattlesView() {
                               battle.difficulty === "low"
                                 ? "outline"
                                 : battle.difficulty === "medium"
-                                  ? "secondary"
-                                  : battle.difficulty === "high"
-                                    ? "default"
-                                    : "destructive"
+                                ? "secondary"
+                                : battle.difficulty === "high"
+                                ? "default"
+                                : "destructive"
                             }
                             className="mt-1"
                           >
@@ -259,7 +297,10 @@ export function ActiveBattlesView() {
                             <span>{battle.tokenA.totalStaked} staked</span>
                           </div>
                           <div className="text-xs text-muted-foreground mt-1">
-                            {calculateDollarValue(battle.tokenA.totalStaked, battle.tokenA.symbol)}
+                            {calculateDollarValue(
+                              battle.tokenA.totalStaked,
+                              battle.tokenA.symbol
+                            )}
                           </div>
                           <Button
                             size="sm"
@@ -278,7 +319,10 @@ export function ActiveBattlesView() {
                             <span>{battle.tokenB.totalStaked} staked</span>
                           </div>
                           <div className="text-xs text-muted-foreground mt-1">
-                            {calculateDollarValue(battle.tokenB.totalStaked, battle.tokenB.symbol)}
+                            {calculateDollarValue(
+                              battle.tokenB.totalStaked,
+                              battle.tokenB.symbol
+                            )}
                           </div>
                           <Button
                             size="sm"
@@ -298,7 +342,6 @@ export function ActiveBattlesView() {
           </div>
         </CardContent>
       </Card>
-
       {/* Battle join modal*/}
       <BattleJoinDialog
         open={!!selectedBattle}
@@ -306,9 +349,13 @@ export function ActiveBattlesView() {
         selectedBattle={selectedBattle}
         initialSelectedToken={selectedToken}
       />
-
       {/* Battle create modal */}
-      <CreateBattleDialog open={createBattle} onOpenChange={setCreateBattle} onCreateBattle={onCreateBattle} />
+      <CreateBattleDialog
+        open={createBattle}
+        onOpenChange={setCreateBattle}
+        onCreateBattle={onCreateBattle}
+        battleFactoryAddress={battleFactoryAddress}
+      />
     </div>
   );
 }
