@@ -59,7 +59,7 @@ export default function Home() {
         <Tabs defaultValue="dashboard" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 text-black">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="battles">Battles</TabsTrigger>
+            <TabsTrigger value="battles">My Battles</TabsTrigger>
             <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
           </TabsList>
           <TabsContent value="dashboard" className="space-y-6">

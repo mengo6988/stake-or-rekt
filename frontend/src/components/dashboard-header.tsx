@@ -39,7 +39,7 @@ export function DashboardHeader() {
               href="/"
               className={cn("text-sm font-medium hover:text-foreground transition-colors", isBattle && "text-muted-foreground" )}
             >
-              Dashboard
+              Home
             </Link>
             <Link href="/active-battles" 
               className={cn("text-sm font-medium hover:text-foreground transition-colors", !isBattle && "text-muted-foreground" )}
