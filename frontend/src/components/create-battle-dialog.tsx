@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useEffect, useState } from "react";
+import {
+  useAccount,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
 import { type Address } from "viem";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +32,12 @@ import { toast } from "react-hot-toast"; // Assuming you have this for notificat
 interface CreateBattleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateBattle?: (tokenA: string, tokenB: string, durationInSeconds: number) => void;
+  onCreateBattle?: (
+    tokenA: string,
+    tokenB: string,
+    durationInSeconds: number,
+    battleAddress?: string
+  ) => void;
   battleFactoryAddress: Address;
 }
 
@@ -45,18 +54,13 @@ export function CreateBattleDialog({
   const [durationUnit, setDurationUnit] = useState("days");
 
   // Contract write hook
-  const { 
-    writeContract, 
-    data: txHash, 
-    isPending,
-    error 
-  } = useWriteContract();
+  const { writeContract, data: txHash, isPending, error } = useWriteContract();
 
   // Wait for transaction receipt
-  const { 
-    isLoading: isConfirming, 
+  const {
+    isLoading: isConfirming,
     isSuccess: isConfirmed,
-    error: confirmError
+    error: confirmError,
   } = useWaitForTransactionReceipt({
     hash: txHash,
   });
@@ -122,24 +126,43 @@ export function CreateBattleDialog({
         functionName: "createBattle",
         args: [tokenA as Address, tokenB as Address, BigInt(durationInSeconds)],
       });
-
     } catch (err) {
       console.error("Error creating battle:", err);
       toast.error("Failed to create battle. Please try again.");
     }
   };
 
-  // Call onCreateBattle when transaction is confirmed
-  if (isConfirmed && onCreateBattle && tokenA && tokenB) {
-    const durationInSeconds = calculateDurationInSeconds();
-    onCreateBattle(tokenA, tokenB, durationInSeconds);
-    // Reset after successful transaction
-    resetForm();
-  }
+  // Get the created battle address from transaction receipt when confirmed
+  useEffect(() => {
+    const getBattleAddressFromTx = async () => {
+      if (isConfirmed && txHash && onCreateBattle && tokenA && tokenB) {
+        try {
+          const durationInSeconds = calculateDurationInSeconds();
+          onCreateBattle(tokenA, tokenB, durationInSeconds);
+
+          toast.success("Battle created successfully!");
+
+          // Reset form after successful transaction
+          resetForm();
+        } catch (err) {
+          console.error("Error getting transaction receipt:", err);
+          toast.success("Battle created, but couldn't verify details");
+
+          // Still call callback and reset form on best effort
+          const durationInSeconds = calculateDurationInSeconds();
+          onCreateBattle(tokenA, tokenB, durationInSeconds);
+          resetForm();
+        }
+      }
+    };
+
+    getBattleAddressFromTx();
+  }, [isConfirmed, txHash]);
 
   // Show errors via toast
   if (error || confirmError) {
-    const errorMessage = (error || confirmError)?.message || "Transaction failed";
+    const errorMessage =
+      (error || confirmError)?.message || "Transaction failed";
     toast.error(errorMessage);
   }
 
@@ -163,7 +186,8 @@ export function CreateBattleDialog({
             Create New Battle
           </DialogTitle>
           <DialogDescription>
-            Create a new battle between two tokens. Users will stake their tokens to compete.
+            Create a new battle between two tokens. Users will stake their
+            tokens to compete.
           </DialogDescription>
         </DialogHeader>
 
@@ -239,23 +263,26 @@ export function CreateBattleDialog({
           <div className="flex items-start gap-2 rounded-md bg-yellow-500/10 p-3 text-sm">
             <AlertCircle className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
             <p>
-              Creating a battle will deploy a new Battle contract. Please verify the token addresses 
-              are correct before proceeding. The battle duration cannot be changed after creation.
+              Creating a battle will deploy a new Battle contract. Please verify
+              the token addresses are correct before proceeding. The battle
+              duration cannot be changed after creation.
             </p>
           </div>
         </div>
 
         <DialogFooter className="gap-2">
-          <Button 
-            variant="outline" 
-            onClick={handleClose} 
+          <Button
+            variant="outline"
+            onClick={handleClose}
             className="hover:bg-red-500 hover:font-bold hover:border-black"
             disabled={isPending || isConfirming}
           >
             Cancel
           </Button>
           <Button
-            disabled={!isFormValid() || isPending || isConfirming || isConfirmed}
+            disabled={
+              !isFormValid() || isPending || isConfirming || isConfirmed
+            }
             onClick={handleCreateBattle}
             className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >

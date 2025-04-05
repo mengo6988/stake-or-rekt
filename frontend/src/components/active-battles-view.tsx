@@ -39,9 +39,9 @@ export function ActiveBattlesView() {
   const [createBattle, setCreateBattle] = useState(false);
 
   // Get the factory address from environment variable
-  const battleFactoryAddress = 
-    process.env.NEXT_PUBLIC_BATTLE_FACTORY_ADDRESS as Address || 
-    "0x0000000000000000000000000000000000000000" as Address;
+  const battleFactoryAddress =
+    (process.env.NEXT_PUBLIC_BATTLE_FACTORY_ADDRESS as Address) ||
+    ("0x0000000000000000000000000000000000000000" as Address);
 
   // Calculate dollar value based on token price
   const calculateDollarValue = (amount: number, symbol: string) => {
@@ -70,9 +70,29 @@ export function ActiveBattlesView() {
   const onCreateBattle = (
     tokenA: string,
     tokenB: string,
-    durationInSeconds: number
+    durationInSeconds: number,
+    battleAddress?: string
   ) => {
-    toast.success("Battle created successfully!");
+    console.log(
+      `Battle created between ${tokenA} and ${tokenB} for ${durationInSeconds}s`
+    );
+
+    if (battleAddress) {
+      console.log(`New battle deployed at: ${battleAddress}`);
+      // 1. Refresh the battles list
+      // 2. Highlight the new battle
+      // 3. Show a more detailed success message
+
+      // Example toast notification
+      toast.success(
+        <div>
+          <div>Battle created successfully!</div>
+          <div className="text-xs mt-1 font-mono break-all">
+            {battleAddress}
+          </div>
+        </div>
+      );
+    }
   };
 
   // Filter and sort battles
