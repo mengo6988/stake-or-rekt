@@ -44,7 +44,7 @@ export function CreateBattleDialog({
   onCreateBattle,
   battleFactoryAddress,
 }: CreateBattleDialogProps) {
-  const { address, isConfirmed, receipt } = useUnifiedWallet();
+  const { address, isConfirmed, receipt, latestHash } = useUnifiedWallet();
   const [tokenA, setTokenA] = useState("");
   const [tokenB, setTokenB] = useState("");
   const [duration, setDuration] = useState("");
@@ -176,112 +176,95 @@ export function CreateBattleDialog({
 
   // Track transaction completion and call the callback
   useEffect(() => {
-    const getBattleAddressFromTx = async () => {
+    const handleBattleCreationCompletion = async () => {
       console.log("Create Battle useEffect triggered");
       console.log("isConfirmed:", isConfirmed);
-      console.log("txHash:", txHash);
+      console.log("txHash:", latestHash);
       console.log("onCreateBattle:", onCreateBattle);
       console.log("tokenA:", tokenA);
       console.log("tokenB:", tokenB);
 
-      if (isConfirmed && txHash && onCreateBattle && tokenA && tokenB) {
+      if (isConfirmed && pendingBattleCreation && onCreateBattle && tokenA && tokenB) {
         try {
+          let battleAddress: string | undefined;
+          
           // Attempt to get the battle address from the transaction receipt
-          const receipt = await (window as any).ethereum.request({
-            method: "eth_getTransactionReceipt",
-            params: [txHash],
-          });
-
-          console.log("Transaction Receipt:", receipt);
-
-          // Extract the battle address from the logs (assuming the first log contains the address)
-          const battleAddress = receipt.logs[0]?.address || "";
+          if (latestHash) {
+            try {
+              const txReceipt = await (window as any).ethereum.request({
+                method: "eth_getTransactionReceipt",
+                params: [latestHash],
+              });
+              
+              console.log("Transaction Receipt:", txReceipt);
+              
+              // Extract the battle address from the logs (if possible)
+              if (txReceipt && txReceipt.logs && txReceipt.logs.length > 0) {
+                // This assumes the battle address is in the logs
+                // In a real implementation, you would need to decode the event logs properly
+                battleAddress = txReceipt.logs[0]?.address;
+              }
+            } catch (receiptErr) {
+              console.error("Error getting transaction receipt:", receiptErr);
+            }
+          } else if (receipt) {
+            // Fallback to receipt from useUnifiedWallet if available
+            if (receipt.logs && receipt.logs.length > 0) {
+              // Try to extract battle address from logs
+              // This is a simplified example
+              battleAddress = receipt.logs[0]?.address;
+            }
+          }
 
           const durationInSeconds = calculateDurationInSeconds();
-
+          
           console.log("Calling onCreateBattle with:", {
             tokenA,
             tokenB,
             durationInSeconds,
             battleAddress,
           });
-
-          // Call the callback with the battle address
+          
+          // Call the callback with the battle information
           onCreateBattle(tokenA, tokenB, durationInSeconds, battleAddress);
-
+          
           toast.success("Battle created successfully!");
-
-          // Reset form after successful transaction
+          
+          // Reset form and close dialog
           resetForm();
+          onOpenChange(false);
         } catch (err) {
-          console.error("Error getting transaction receipt:", err);
-          toast.error("Failed to create battle. Please try again.");
-
-          // Fallback with minimal information
-    if (isConfirmed && pendingBattleCreation && receipt && onCreateBattle) {
-      try {
-        const durationInSeconds = calculateDurationInSeconds();
-
-        // Extract battle address from logs if possible
-        let battleAddress;
-
-        // If we have a receipt, try to extract the battle address from event logs
-        if (receipt.logs && receipt.logs.length > 0) {
-          // Look for BattleCreated event in logs
-          // This is an example - adjust based on your actual event structure
+          console.error("Error handling battle creation completion:", err);
+          toast.success("Battle created, but couldn't verify details");
+          
+          // Still call callback on best effort
           try {
-            // Find the right log entry
-            // This is just a placeholder - you'll need to implement this based on your contract's event structure
-            const battleCreatedEvent = receipt.logs.find(log =>
-              log.topics && log.topics[0] === "0x..." // Your event signature hash
-            );
-
-            if (battleCreatedEvent && battleCreatedEvent.data) {
-              // Extract the battle address from the event data
-              // Again, this is just an example
-              // battleAddress = "0x" + battleCreatedEvent.data.slice(26, 66);
-            }
-          } catch (parseErr) {
-            console.error("Error parsing event logs:", parseErr);
+            const durationInSeconds = calculateDurationInSeconds();
+            onCreateBattle(tokenA, tokenB, durationInSeconds);
+          } catch (callbackErr) {
+            console.error("Error in callback:", callbackErr);
           }
+          
+          resetForm();
+          onOpenChange(false);
         }
-
-        // Call the callback with the battle information
-        onCreateBattle(tokenA, tokenB, durationInSeconds, battleAddress);
-
-        toast.success("Battle created successfully!");
-
-        // Reset form and close dialog after successful transaction
-        resetForm();
-        onOpenChange(false);
-      } catch (err) {
-        console.error("Error handling battle creation completion:", err);
-        toast.success("Battle created, but couldn't verify details");
-
-        // Still call callback on best effort
-        try {
-          const durationInSeconds = calculateDurationInSeconds();
-          onCreateBattle(tokenA, tokenB, durationInSeconds);
-        } catch (callbackErr) {
-          console.error("Error in callback:", callbackErr);
-        }
-
-        resetForm();
-        onOpenChange(false);
+        
+        // Reset the pending state
+        setPendingBattleCreation(false);
       }
-
-      // Reset the pending state
-      setPendingBattleCreation(false);
-    }
+    };
+    
+    handleBattleCreationCompletion();
   }, [
     isConfirmed,
     pendingBattleCreation,
     receipt,
+    latestHash,
     onCreateBattle,
     tokenA,
     tokenB,
     calculateDurationInSeconds,
-    onOpenChange
+    onOpenChange,
   ]);
 
   const isFormValid = () => {

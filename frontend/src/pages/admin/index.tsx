@@ -232,7 +232,7 @@ export default function BattleAdminPage() {
     to: battleAddress as Address,
     abi: battleAbi as Abi,
     functionName: "resolveBattle",
-    args: [parseEther(tokenAPrice), parseEther(tokenBPrice)],
+    args: [BigInt(0), BigInt(0)],
     description: "Resolve Battle",
   });
 
@@ -240,7 +240,7 @@ export default function BattleAdminPage() {
     to: battleAddress as Address,
     abi: battleAbi as Abi,
     functionName: "forceResolveBattle",
-    args: [parseEther(tokenAPrice), parseEther(tokenBPrice)],
+    args: [BigInt(0), BigInt(0)],
     description: "Force Resolve Battle",
   });
 
@@ -310,30 +310,57 @@ export default function BattleAdminPage() {
   }, [isSuccess, isSwapping]);
 
   // Handlers
-  const handleResolveBattle = () => {
-    if (!tokenAPrice || !tokenBPrice) {
-      toast.error("Please provide both token prices");
-      return;
-    }
-
-    setError("");
+const handleResolveBattle = () => {
+  if (!tokenAPrice || !tokenBPrice) {
+    toast.error("Please provide both token prices");
+    return;
+  }
+  
+  setError("");
+  
+  try {
+    // Convert to strings to ensure we're working with string values
+    const tokenAPriceStr = tokenAPrice.toString();
+    const tokenBPriceStr = tokenBPrice.toString();
+    
+    // Use parseUnits to handle the decimals properly (scaling to 18 decimals)
     resolve.execute({
-      args: [parseEther(tokenAPrice), parseEther(tokenBPrice)],
+      args: [
+        parseUnits(tokenAPriceStr, 18), 
+        parseUnits(tokenBPriceStr, 18)
+      ],
     });
-  };
+  } catch (err) {
+    console.error("Error in handleResolveBattle:", err);
+    toast.error(`Failed to resolve battle: ${(err as Error).message}`);
+  }
+};
 
-  const handleForceResolveBattle = () => {
-    if (!tokenAPrice || !tokenBPrice) {
-      toast.error("Please provide both token prices");
-      return;
-    }
-
-    setError("");
+const handleForceResolveBattle = () => {
+  if (!tokenAPrice || !tokenBPrice) {
+    toast.error("Please provide both token prices");
+    return;
+  }
+  
+  setError("");
+  
+  try {
+    // Convert to strings to ensure we're working with string values
+    const tokenAPriceStr = tokenAPrice.toString();
+    const tokenBPriceStr = tokenBPrice.toString();
+    
+    // Use parseUnits to handle the decimals properly (scaling to 18 decimals)
     forceResolve.execute({
-      args: [parseEther(tokenAPrice), parseEther(tokenBPrice)],
+      args: [
+        parseUnits(tokenAPriceStr, 18), 
+        parseUnits(tokenBPriceStr, 18)
+      ],
     });
-  };
-
+  } catch (err) {
+    console.error("Error in handleForceResolveBattle:", err);
+    toast.error(`Failed to force resolve battle: ${(err as Error).message}`);
+  }
+};
   const handleDepositWinnings = () => {
     if (!depositAmount) {
       toast.error("Please provide a deposit amount");

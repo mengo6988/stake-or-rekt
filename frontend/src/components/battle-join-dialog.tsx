@@ -60,9 +60,7 @@ export function BattleJoinDialog({
     abi: erc20Abi,
     functionName: "balanceOf",
     args: [address as Address],
-    args: [address as Address],
     query: {
-      enabled: Boolean(selectedBattle && address),
       enabled: Boolean(selectedBattle && address),
     },
   }) as { data: bigint };
@@ -72,9 +70,7 @@ export function BattleJoinDialog({
     abi: erc20Abi,
     functionName: "balanceOf",
     args: [address as Address],
-    args: [address as Address],
     query: {
-      enabled: Boolean(selectedBattle && address),
       enabled: Boolean(selectedBattle && address),
     },
   }) as { data: bigint };
@@ -300,7 +296,8 @@ export function BattleJoinDialog({
       <DialogContent className="sm:max-w-[500px] bg-[#171725] text-white border-none max-h-[85vh] overflow-y-auto">
         <DialogHeader className="mb-1">
           <DialogTitle className="text-xl">
-            Join Battle: {selectedBattle.name}
+            Join Battle: {selectedBattle.name} <br />
+            {selectedBattle.address}
           </DialogTitle>
           <DialogDescription>
             Stake your tokens to join this battle and compete for the opposing
@@ -371,38 +368,6 @@ export function BattleJoinDialog({
               </RadioGroup>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <Label htmlFor="stake-amount">Stake Amount</Label>
-                <span className="text-sm text-muted-foreground">
-                  Available:{" "}
-                  {formatUnits(
-                    selectedToken === "tokenA" ? tokenABalance : tokenBBalance,
-                    18,
-                  )}{" "}
-                  {selectedToken === "tokenA"
-                    ? selectedBattle.tokenA.symbol
-                    : selectedBattle.tokenB.symbol}
-                </span>
-              </div>
-              <div className="flex space-x-2">
-                <Input
-                  id="stake-amount"
-                  type="number"
-                  placeholder="Enter amount to stake"
-                  value={stakeAmount}
-                  onChange={(e) => setStakeAmount(e.target.value)}
-                  className="flex-1"
-                />
-                <Button variant="outline" size="sm" onClick={handleMaxClick}>
-                  MAX
-                </Button>
-              </div>
-              <button onClick={handleFaucetClick}>FAUCET</button>
-              <p className="text-xs text-muted-foreground">
-                Enter the amount you wish to stake in this battle
-              </p>
-            </div>
             {/* Stake Amount Section */}
             {selectedToken && (
               <>
