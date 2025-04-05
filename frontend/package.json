@@ -22,6 +22,7 @@
     "@radix-ui/react-tooltip": "^1.1.8",
     "@rainbow-me/rainbowkit": "^2.2.4",
     "@tanstack/react-query": "^5.71.10",
+    "axios": "^1.8.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.487.0",
