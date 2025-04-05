@@ -72,7 +72,7 @@ export default function ActiveBattlesCard() {
   };
 
   return (
-    <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div className="rounded-lg bg-[#171725] text-white">
       <div className="p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium">Your Active Battles</h3>
@@ -87,7 +87,7 @@ export default function ActiveBattlesCard() {
             <Link href="/active-battles">
               <Button
                 variant="outline"
-                className="bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white"
+                className="bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
                 size="sm"
               >
                 <Swords className="h-4 w-4" />
@@ -101,7 +101,7 @@ export default function ActiveBattlesCard() {
           {userActiveBattles.map((battle) => (
             <div
               key={battle.id}
-              className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border/30"
+              className="flex items-center justify-between p-4 "
             >
               <div className="flex items-center gap-3">
                 <div
@@ -168,10 +168,11 @@ export default function ActiveBattlesCard() {
         </div>
 
         <div className="mt-4">
-          <button className="btn btn-sm btn-outline w-full gap-2">
-            <Swords className="h-4 w-4" />
+        <Link href="/active-battles">
+          <button className="btn btn-sm btn-outline w-full gap-2 cursor-pointer">
             Find more battles
           </button>
+          </Link>
         </div>
       </div>
     </div>
