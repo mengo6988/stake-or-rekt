@@ -22,6 +22,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Battle } from "@/types/battle";
+import { battleFactoryAbi } from "@/config/abi/BattleFactory";
+import { useAccount, useReadContract } from "wagmi";
+import { Address, erc20Abi, formatUnits } from "viem";
 
 interface BattleJoinDialogProps {
   open: boolean;
@@ -39,10 +42,39 @@ export function BattleJoinDialog({
   const [selectedToken, setSelectedToken] = useState<
     "tokenA" | "tokenB" | null
   >(initialSelectedToken);
+  const account = useAccount();
   
   const [stakeAmount, setStakeAmount] = useState("");
   const [maxStakeAmount, setMaxStakeAmount] = useState(2500);
 
+  const { data: tokenABalance = BigInt(0) } = useReadContract({
+      address: selectedBattle?.tokenA.address as Address,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [account.address as Address],
+      query: {
+        enabled: Boolean(selectedBattle && account)
+      }
+    }) as {data:bigint};
+
+    const { data: tokenBBalance = BigInt(0) } = useReadContract({
+      address: selectedBattle?.tokenB.address as Address,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [account.address as Address],
+      query: {
+        enabled: Boolean(selectedBattle && account)
+      }
+    }) as {data:bigint};
+
+    useEffect(() => {
+      console.log("acc:", account.address)
+      console.log("a: ",selectedBattle?.tokenA.address)
+      console.log("b: ",selectedBattle?.tokenB.address)
+      console.log("balance a", tokenABalance)
+      console.log("balance b", tokenBBalance)
+
+    })
   // Update selectedToken when initialSelectedToken changes
   useEffect(() => {
     setSelectedToken(initialSelectedToken);
@@ -170,7 +202,7 @@ export function BattleJoinDialog({
               <div className="flex justify-between">
                 <Label htmlFor="stake-amount">Stake Amount</Label>
                 <span className="text-sm text-muted-foreground">
-                  Available: {maxStakeAmount.toLocaleString()}{" "}
+                  Available: {formatUnits(selectedToken === "tokenA" ? tokenABalance : tokenBBalance, 18)}{" "}
                   {selectedToken === "tokenA"
                     ? selectedBattle.tokenA.symbol
                     : selectedBattle.tokenB.symbol}
