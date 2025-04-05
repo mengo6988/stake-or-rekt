@@ -22,14 +22,11 @@ import {
 import { Battle } from "@/types/battle";
 import { extendedERC20ABI } from "@/config/abi/ERC20";
 import { battleAbi } from "@/config/abi/Battle";
-import {
-  useAccount,
-  useReadContract,
-  useWaitForTransactionReceipt,
-  useWriteContract,
-} from "wagmi";
+import { useReadContract } from "wagmi";
 import { Address, erc20Abi, formatUnits, parseUnits } from "viem";
 import { toast } from "sonner";
+import { useUnifiedWallet } from "@/hooks/useUnifiedWallet";
+import { useContractInteraction } from "@/hooks/useContractInteraction";
 import { getTokensOwnedByAccount, TokenData } from "../lib/token-utils";
 
 interface BattleJoinDialogProps {
@@ -48,9 +45,10 @@ export function BattleJoinDialog({
   const [selectedToken, setSelectedToken] = useState<
     "tokenA" | "tokenB" | null
   >(initialSelectedToken);
-  const { address, isConnected } = useAccount();
+  const { address, isConfirmed } = useUnifiedWallet();
 
   const [stakeAmount, setStakeAmount] = useState("");
+  const [maxStakeAmount, setMaxStakeAmount] = useState(2500);
   const [userTokens, setUserTokens] = useState<TokenData[]>([]);
   const [isLoadingTokens, setIsLoadingTokens] = useState(false);
   const [relevantToken, setRelevantToken] = useState<TokenData | null>(null);
@@ -77,21 +75,60 @@ export function BattleJoinDialog({
     },
   }) as { data: bigint };
 
-  const { writeContract: faucetTokenA } = useWriteContract();
-  const { writeContract: faucetTokenB } = useWriteContract();
-  const { writeContractAsync } = useWriteContract();
-  const { writeContract: stakeTokenWrite, data: stakeTxHash } =
-    useWriteContract();
-
-  // Transaction Receipt
-  const { isSuccess: isStakeSuccess } = useWaitForTransactionReceipt({
-    hash: stakeTxHash,
+  const faucetA = useContractInteraction({
+    to: selectedBattle?.tokenA.address as Address,
+    abi: extendedERC20ABI,
+    functionName: "faucet",
+    args: [parseUnits("1000", 18)],
   });
 
-  // Fetch user tokens when dialog opens
+  const faucetB = useContractInteraction({
+    to: selectedBattle?.tokenB.address as Address,
+    abi: extendedERC20ABI,
+    functionName: "faucet",
+    args: [parseUnits("1000", 18)],
+    description: "faucet",
+  });
+
+  // const { writeContract: faucetTokenA } = useWriteContract();
+  //
+  // const { writeContract: faucetTokenB } = useWriteContract();
+
+  // Staking Contracts
+  const stakeA = useContractInteraction({
+    to: selectedBattle?.address as Address,
+    abi: battleAbi,
+    functionName: "stakeTokenA",
+    args: [BigInt(0)],
+  });
+
+  const stakeB = useContractInteraction({
+    to: selectedBattle?.address as Address,
+    abi: battleAbi,
+    functionName: "stakeTokenB",
+    args: [BigInt(0)],
+  });
+
+  const approveA = useContractInteraction({
+    to: selectedBattle?.tokenA.address as Address,
+    abi: erc20Abi,
+    functionName: "approve",
+    args: [selectedBattle?.address as Address, BigInt(0)],
+    description: "Approve Token A",
+  });
+
+  const approveB = useContractInteraction({
+    to: selectedBattle?.tokenB.address as Address,
+    abi: erc20Abi,
+    functionName: "approve",
+    args: [selectedBattle?.address as Address, BigInt(0)],
+    description: "Approve Token B",
+  });
+
+  // Handle Stake Success/Error
   useEffect(() => {
     async function fetchUserTokens() {
-      if (!isConnected || !address || !open) return;
+      if (!address || !open) return;
 
       setIsLoadingTokens(true);
 
@@ -106,7 +143,7 @@ export function BattleJoinDialog({
     }
 
     fetchUserTokens();
-  }, [address, isConnected, open]);
+  }, [address, address, open]);
 
   // Update relevant token when selectedToken changes
   useEffect(() => {
@@ -129,11 +166,11 @@ export function BattleJoinDialog({
 
   // Handle Stake Success
   useEffect(() => {
-    if (isStakeSuccess) {
+    if (isConfirmed) {
       toast.success("Successfully staked tokens!");
       onOpenChange(false);
     }
-  }, [isStakeSuccess, onOpenChange]);
+  }, [isConfirmed, onOpenChange]);
 
   // Update selectedToken when initialSelectedToken changes
   useEffect(() => {
@@ -141,22 +178,16 @@ export function BattleJoinDialog({
   }, [initialSelectedToken]);
 
   const handleFaucetClick = async () => {
-    if (!selectedBattle || !selectedToken) return;
-
-    if (selectedToken === "tokenA") {
-      faucetTokenA({
-        address: selectedBattle.tokenA.address as Address,
-        abi: extendedERC20ABI,
-        functionName: "faucet",
-        args: [parseUnits("1000", 18)],
-      });
-    } else {
-      faucetTokenB({
-        address: selectedBattle.tokenB.address as Address,
-        abi: extendedERC20ABI,
-        functionName: "faucet",
-        args: [parseUnits("1000", 18)],
-      });
+    if (selectedBattle) {
+      if (selectedToken === "tokenA") {
+        faucetA.execute({
+          args: [parseUnits("1000", 18)],
+        });
+      } else {
+        faucetB.execute({
+          args: [parseUnits("1000", 18)],
+        });
+      }
     }
   };
 
@@ -184,31 +215,28 @@ export function BattleJoinDialog({
       return;
     }
 
-    const tokenAddress =
-      selectedToken === "tokenA"
-        ? selectedBattle.tokenA.address
-        : selectedBattle.tokenB.address;
-
     try {
       const stakeAmountWei = parseUnits(stakeAmount, 18);
 
-      await writeContractAsync({
-        address: tokenAddress as Address,
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [selectedBattle.address as Address, stakeAmountWei],
-      });
+      if (selectedToken === "tokenA") {
+        await approveA.execute({
+          args: [selectedBattle.address as Address, stakeAmountWei],
+        });
+      } else {
+        await approveB.execute({
+          args: [selectedBattle.address as Address, stakeAmountWei],
+        });
+      }
 
-      // Then stake tokens
-      const stakeFunction =
-        selectedToken === "tokenA" ? "stakeTokenA" : "stakeTokenB";
-
-      await writeContractAsync({
-        address: selectedBattle.address as Address,
-        abi: battleAbi,
-        functionName: stakeFunction,
-        args: [stakeAmountWei],
-      });
+      if (selectedToken === "tokenA") {
+        stakeA.execute({
+          args: [stakeAmountWei],
+        });
+      } else {
+        stakeB.execute({
+          args: [stakeAmountWei],
+        });
+      }
 
       setStakeAmount("");
       onOpenChange(false);
@@ -268,7 +296,8 @@ export function BattleJoinDialog({
       <DialogContent className="sm:max-w-[500px] bg-[#171725] text-white border-none max-h-[85vh] overflow-y-auto">
         <DialogHeader className="mb-1">
           <DialogTitle className="text-xl">
-            Join Battle: {selectedBattle.name}
+            Join Battle: {selectedBattle.name} <br />
+            {selectedBattle.address}
           </DialogTitle>
           <DialogDescription>
             Stake your tokens to join this battle and compete for the opposing
@@ -551,10 +580,7 @@ export function BattleJoinDialog({
           <Button
             onClick={handleStake}
             disabled={
-              !selectedToken ||
-              !stakeAmount ||
-              parseFloat(stakeAmount) <= 0 ||
-              !isConnected
+              !stakeAmount || parseFloat(stakeAmount) <= 0 || !address
             }
             className="bg-[#BEA8E0A3] text-white border-none hover:bg-[#BEA8E0] hover:text-white cursor-pointer"
           >

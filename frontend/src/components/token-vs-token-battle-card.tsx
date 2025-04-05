@@ -1,12 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import {
-  useAccount,
-  useReadContract,
-  useWriteContract,
-  useWaitForTransactionReceipt,
-} from "wagmi";
+import { useReadContract } from "wagmi";
 import { parseEther, formatEther } from "viem";
 
 import { Battle } from "@/types/battle";
@@ -17,11 +12,14 @@ import { Button } from "./ui/button";
 import { TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { Tooltip } from "@radix-ui/react-tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import {toast} from "sonner";
 
 // Import the necessary ABIs
 import { battleAbi } from "@/config/abi/Battle";
 import { extendedERC20ABI } from "@/config/abi/ERC20";
 import axios from "axios";
+import { useUnifiedWallet } from "@/hooks/useUnifiedWallet";
+import { useContractInteraction } from "@/hooks/useContractInteraction";
 
 // Function to get avatar src based on index
 const getAvatarSrc = (index: number) => {
@@ -41,7 +39,7 @@ export default function TokenVsTokenBattleCard({
   onJoinA,
   onJoinB,
 }: TokenVsTokenBattleCardProps) {
-  const { address, isConnected } = useAccount();
+  const { address, isConfirmed } = useUnifiedWallet();
 
   const [tokenAPrice, setTokenAPrice] = useState(0);
   const [tokenBPrice, setTokenBPrice] = useState(0);
@@ -52,7 +50,7 @@ export default function TokenVsTokenBattleCard({
     abi: extendedERC20ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    query: { enabled: isConnected },
+    query: { enabled: Boolean(address) },
   }) as { data: bigint };
 
   const { data: tokenBBalance } = useReadContract({
@@ -60,7 +58,7 @@ export default function TokenVsTokenBattleCard({
     abi: extendedERC20ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    query: { enabled: isConnected },
+    query: { enabled: Boolean(address) },
   }) as { data: bigint };
 
   // Read user's current stakes in the battle
@@ -69,7 +67,7 @@ export default function TokenVsTokenBattleCard({
     abi: battleAbi,
     functionName: "tokenAStakes",
     args: address ? [address] : undefined,
-    query: { enabled: isConnected },
+    query: { enabled: Boolean(address) },
   }) as { data: bigint };
 
   const { data: userTokenBStake } = useReadContract({
@@ -77,8 +75,81 @@ export default function TokenVsTokenBattleCard({
     abi: battleAbi,
     functionName: "tokenBStakes",
     args: address ? [address] : undefined,
-    query: { enabled: isConnected },
+    query: { enabled: Boolean(address) },
   }) as { data: bigint };
+
+  // Use contract interaction hooks for staking
+  const stakeA = useContractInteraction({
+    to: battle.address as `0x${string}`,
+    abi: battleAbi,
+    functionName: "stakeTokenA",
+    args: [parseEther("0.1")], // Default value, will be overridden when executed
+    description: `Stake ${battle.tokenA.symbol}`
+  });
+
+  const stakeB = useContractInteraction({
+    to: battle.address as `0x${string}`,
+    abi: battleAbi,
+    functionName: "stakeTokenB",
+    args: [parseEther("0.1")], // Default value, will be overridden when executed
+    description: `Stake ${battle.tokenB.symbol}`
+  });
+
+  useEffect(() => {
+    const fetchTokenPrice = async () => {
+      if (!battle.tokenA.address || !battle.tokenB.address) return;
+
+      try {
+        console.log("tokenA address: ", battle.tokenA.address);
+        console.log("tokenB address: ", battle.tokenB.address);
+        const response = await axios.get("/api/get-token-prices", {
+          params: {
+            tokenAAddress: battle.tokenA.address,
+            tokenBAddress: battle.tokenB.address,
+          },
+        });
+
+        const { tokenAPrice, tokenBPrice } = response.data;
+
+        setTokenAPrice(tokenAPrice);
+        setTokenBPrice(tokenBPrice);
+      } catch (error) {
+        console.error("Error fetching token prices:", error);
+      }
+    };
+
+    fetchTokenPrice();
+  }, [battle.tokenA.address, battle.tokenB.address]);
+
+  // Handle staking errors and successes
+  useEffect(() => {
+    if (stakeA.isSuccess) {
+      toast.success(`Successfully staked ${battle.tokenA.symbol}`);
+      onJoinA(); // Call the onJoinA callback on success
+    }
+
+    if (stakeB.isSuccess) {
+      toast.success(`Successfully staked ${battle.tokenB.symbol}`);
+      onJoinB(); // Call the onJoinB callback on success
+    }
+
+    if (stakeA.error) {
+      toast.error(`Failed to stake ${battle.tokenA.symbol}: ${stakeA.error}`);
+    }
+
+    if (stakeB.error) {
+      toast.error(`Failed to stake ${battle.tokenB.symbol}: ${stakeB.error}`);
+    }
+  }, [
+    stakeA.isSuccess,
+    stakeB.isSuccess,
+    stakeA.error,
+    stakeB.error,
+    battle.tokenA.symbol,
+    battle.tokenB.symbol,
+    onJoinA,
+    onJoinB
+  ]);
 
   // Difficulty color mapping
   const getDifficultyColor = (difficulty: string) => {
@@ -98,19 +169,6 @@ export default function TokenVsTokenBattleCard({
 
   // Dollar value calculation
   const calculateDollarValue = (amount: number, symbol: string, price: number) => {
-    // const prices: Record<string, number> = {
-    //   ETH: 3500,
-    //   BTC: 62000,
-    //   USDC: 1,
-    //   TKNS: 2.5,
-    //   SOL: 145,
-    //   DOGE: 0.15,
-    //   SHIB: 0.00002,
-    //   DAI: 1,
-    // };
-    //
-    // const price = prices[symbol] || 0;
-    // return 69
     return (amount * price).toLocaleString("en-US", {
       style: "currency",
       currency: "USD",
@@ -125,7 +183,42 @@ export default function TokenVsTokenBattleCard({
       avatar: getAvatarSrc(index),
     })
   );
+  // Stake handlers
+  const handleStakeTokenA = async (amount: number) => {
+    if (!address) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
 
+    const stakeAmount = parseEther(amount.toString());
+
+    try {
+      stakeA.execute({
+        args: [stakeAmount]
+      });
+    } catch (error: any) {
+      console.error("Stake Token A Error:", error);
+      toast.error(`Failed to stake ${battle.tokenA.symbol}: ${error.message}`);
+    }
+  };
+
+  const handleStakeTokenB = async (amount: number) => {
+    if (!address) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
+    const stakeAmount = parseEther(amount.toString());
+
+    try {
+      stakeB.execute({
+        args: [stakeAmount]
+      });
+    } catch (error: any) {
+      console.error("Stake Token B Error:", error);
+      toast.error(`Failed to stake ${battle.tokenB.symbol}: ${error.message}`);
+    }
+  };
   const tokenBParticipantsList = battle.tokenB.participants_list.map(
     (participant, index) => ({
       ...participant,
@@ -168,7 +261,7 @@ export default function TokenVsTokenBattleCard({
               <Badge variant="outline" className="font-bold text-green-600">
                 {battle.tokenA.symbol}
               </Badge>
-              {isConnected && tokenABalance && (
+              {address && tokenABalance && (
                 <span className="text-xs text-muted-foreground">
                   Balance: {parseFloat(formatEther(tokenABalance)).toFixed(2)}
                 </span>
@@ -191,7 +284,7 @@ export default function TokenVsTokenBattleCard({
               className="h-1"
             />
             <div className="space-y-2">
-              {isConnected && userTokenAStake && (
+              {address && userTokenAStake && (
                 <div className="text-xs text-muted-foreground">
                   Your Stake: {formatEther(userTokenAStake)}{" "}
                   {battle.tokenA.symbol}
@@ -213,7 +306,7 @@ export default function TokenVsTokenBattleCard({
               <Badge variant="outline" className="font-bold text-red-600">
                 {battle.tokenB.symbol}
               </Badge>
-              {isConnected && tokenBBalance && (
+              {address && tokenBBalance && (
                 <span className="text-xs text-muted-foreground">
                   Balance: {parseFloat(formatEther(tokenBBalance)).toFixed(2)}
                 </span>
@@ -236,7 +329,7 @@ export default function TokenVsTokenBattleCard({
               className="h-1"
             />
             <div className="space-y-2">
-              {isConnected && userTokenBStake && (
+              {address && userTokenBStake && (
                 <div className="text-xs text-muted-foreground">
                   Your Stake: {formatEther(userTokenBStake)}{" "}
                   {battle.tokenB.symbol}

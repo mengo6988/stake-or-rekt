@@ -16,3 +16,8 @@ depth = 64
 base = "${BASE_RPC_URL}"
 baseSepolia = "${BASE_SEPOLIA_RPC_URL}"
 localBase = "${LOCAL_BASE_RPC_URL}"
+flowSepolia = "${FLOW_RPC_URL}"
+
+[etherscan]
+base_mainnet = { key = "${ETHERSCAN_API_KEY}", url = "https://api.basescan.org/api" }
+base_sepolia = { key = "${ETHERSCAN_API_KEY}", url = "https://api-sepolia.basescan.org/api" }

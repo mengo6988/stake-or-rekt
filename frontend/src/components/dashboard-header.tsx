@@ -16,6 +16,7 @@ import { Bell, Icon, Menu, Trophy, Wallet } from "lucide-react"
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useRouter } from "next/router"
 import { cn } from "@/lib/utils"
+import WalletConnectButton from "./wallet-connect-button"
 
 export function DashboardHeader() {
   const router = useRouter()
@@ -35,8 +36,9 @@ export function DashboardHeader() {
           </Link>
         </div>
         <div className="flex items-center gap-4">
+          <WalletConnectButton />
 
-          <ConnectButton showBalance={false} chainStatus="icon"/>
+          {/* <ConnectButton /> */}
           {/* {isConnected ? ( */}
           {/*   <> */}
           {/*     <Button variant="outline" size="sm" className="hidden md:flex gap-2"> */}
