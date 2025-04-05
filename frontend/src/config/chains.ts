@@ -26,11 +26,11 @@ export const basesepolia = {
     symbol: "ETH",
   },
   rpcUrls: {
-    public: { http: ["https://goerli.base.org"] },
-    default: { http: ["https://goerli.base.org"] },
+    public: { http: ["https://sepolia.base.org"] },
+    default: { http: ["https://sepolia.base.org"] },
   },
   blockExplorers: {
-    default: { name: "Base Scan", url: "https://goerli.basescan.org" },
+    default: { name: "Base Scan", url: "https://sepolia.basescan.org" },
   },
   testnet: true,
 } as const satisfies Chain;
