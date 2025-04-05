@@ -20,7 +20,7 @@ const queryClient = new QueryClient({
 
 const config = getDefaultConfig({
   appName: "My RainbowKit App",
-  projectId: "YOUR_PROJECT_ID",
+  projectId: "Stake-or-Rekt",
   chains: [mainnet, polygon, optimism, arbitrum, base, baseSepolia],
   ssr: true, // If your dApp uses server side rendering (SSR)
 });
