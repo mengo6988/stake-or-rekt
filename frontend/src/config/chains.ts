@@ -17,7 +17,7 @@ export const base = {
   },
 } as const satisfies Chain;
 
-export const basesepolia = {
+export const baseSepolia = {
   id: 84531,
   name: "Base Sepolia",
   nativeCurrency: {
