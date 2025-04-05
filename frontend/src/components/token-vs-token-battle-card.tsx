@@ -1,5 +1,13 @@
-"use client"
+"use client";
 
+import { useState, useMemo } from "react";
+import {
+  useAccount,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
+import { parseEther, formatEther } from "viem";
 import { Battle } from "@/types/battle";
 import { Clock, Flame, Swords } from "lucide-react";
 import { Badge } from "./ui/badge";
@@ -8,6 +16,11 @@ import { Button } from "./ui/button";
 import { TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { Tooltip } from "@radix-ui/react-tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { toast } from "sonner";
+
+// Import the necessary ABIs
+import { battleAbi } from "@/config/abi/Battle";
+import { extendedERC20ABI } from "@/config/abi/ERC20";
 
 interface TokenVsTokenBattleCardProps {
   battle: Battle;
@@ -20,6 +33,92 @@ export default function TokenVsTokenBattleCard({
   onJoinA,
   onJoinB,
 }: TokenVsTokenBattleCardProps) {
+  const { address, isConnected } = useAccount();
+
+  // Read user's token balances
+  const { data: tokenABalance } = useReadContract({
+    address: battle.tokenA.address as `0x${string}`,
+    abi: extendedERC20ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: { enabled: isConnected },
+  }) as { data: bigint };
+
+  const { data: tokenBBalance } = useReadContract({
+    address: battle.tokenB.address as `0x${string}`,
+    abi: extendedERC20ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: { enabled: isConnected },
+  }) as { data: bigint };
+
+  // Read user's current stakes in the battle
+  const { data: userTokenAStake } = useReadContract({
+    address: battle.address as `0x${string}`,
+    abi: battleAbi,
+    functionName: "tokenAStakes",
+    args: address ? [address] : undefined,
+    query: { enabled: isConnected },
+  }) as { data: bigint };
+
+  const { data: userTokenBStake } = useReadContract({
+    address: battle.address as `0x${string}`,
+    abi: battleAbi,
+    functionName: "tokenBStakes",
+    args: address ? [address] : undefined,
+    query: { enabled: isConnected },
+  }) as { data: bigint };
+
+  // Prepare write contract hooks for staking
+  const {
+    writeContract: stakeTokenAWrite,
+    data: stakeTokenATxHash,
+    error: stakeTokenAError,
+  } = useWriteContract();
+
+  const {
+    writeContract: stakeTokenBWrite,
+    data: stakeTokenBTxHash,
+    error: stakeTokenBError,
+  } = useWriteContract();
+
+  // Wait for transaction confirmations
+  const { isSuccess: isStakeTokenASuccess } = useWaitForTransactionReceipt({
+    hash: stakeTokenATxHash,
+  });
+
+  const { isSuccess: isStakeTokenBSuccess } = useWaitForTransactionReceipt({
+    hash: stakeTokenBTxHash,
+  });
+
+  // Handle staking errors and successes
+  useMemo(() => {
+    if (stakeTokenAError) {
+      toast.error(
+        `Failed to stake ${battle.tokenA.symbol}: ${stakeTokenAError.message}`
+      );
+    }
+    if (stakeTokenBError) {
+      toast.error(
+        `Failed to stake ${battle.tokenB.symbol}: ${stakeTokenBError.message}`
+      );
+    }
+    if (isStakeTokenASuccess) {
+      toast.success(`Successfully staked ${battle.tokenA.symbol}`);
+    }
+    if (isStakeTokenBSuccess) {
+      toast.success(`Successfully staked ${battle.tokenB.symbol}`);
+    }
+  }, [
+    stakeTokenAError,
+    stakeTokenBError,
+    isStakeTokenASuccess,
+    isStakeTokenBSuccess,
+    battle.tokenA.symbol,
+    battle.tokenB.symbol,
+  ]);
+
+  // Difficulty color mapping
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case "low":
@@ -35,11 +134,9 @@ export default function TokenVsTokenBattleCard({
     }
   };
 
-  // This function would calculate dollar value based on token price
+  // Dollar value calculation
   const calculateDollarValue = (amount: number, symbol: string) => {
-    // In a real implementation, you would use current market prices
-    // This is a placeholder implementation
-    const prices = {
+    const prices: Record<string, number> = {
       ETH: 3500,
       BTC: 62000,
       USDC: 1,
@@ -47,15 +144,58 @@ export default function TokenVsTokenBattleCard({
       SOL: 145,
       DOGE: 0.15,
       SHIB: 0.00002,
-      DAI: 1
+      DAI: 1,
     };
-    
+
     const price = prices[symbol] || 0;
-    return (amount * price).toLocaleString('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0
+    return (amount * price).toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
     });
+  };
+
+  // Stake handlers
+  const handleStakeTokenA = async (amount: number) => {
+    if (!isConnected) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
+    const stakeAmount = parseEther(amount.toString());
+
+    try {
+      stakeTokenAWrite({
+        address: battle.address as `0x${string}`,
+        abi: battleAbi,
+        functionName: "stakeTokenA",
+        args: [stakeAmount],
+      });
+    } catch (error: any) {
+      console.error("Stake Token A Error:", error);
+      toast.error(`Failed to stake ${battle.tokenA.symbol}: ${error.message}`);
+    }
+  };
+
+  const handleStakeTokenB = async (amount: number) => {
+    if (!isConnected) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
+    const stakeAmount = parseEther(amount.toString());
+
+    try {
+      stakeTokenBWrite({
+        address: battle.address as `0x${string}`,
+        abi: battleAbi,
+        functionName: "stakeTokenB",
+        args: [stakeAmount],
+      });
+    } catch (error: any) {
+      console.error("Stake Token B Error:", error);
+      toast.error(`Failed to stake ${battle.tokenB.symbol}: ${error.message}`);
+    }
   };
 
   return (
@@ -64,8 +204,12 @@ export default function TokenVsTokenBattleCard({
         <div className="flex justify-between items-start">
           <div>
             <h3 className="font-medium text-lg">{battle.name}</h3>
-            <p className="text-sm text-muted-foreground truncate w-48" title={battle.id}>
-              {battle.address.substring(0, 4)}...{battle.address.substring(battle.address.length - 4)}
+            <p
+              className="text-sm text-muted-foreground truncate w-48"
+              title={battle.id}
+            >
+              {battle.address.substring(0, 4)}...
+              {battle.address.substring(battle.address.length - 4)}
             </p>
           </div>
           <div className="flex items-center gap-1 text-sm">
@@ -89,27 +233,44 @@ export default function TokenVsTokenBattleCard({
               <Badge variant="outline" className="font-bold text-green-600">
                 {battle.tokenA.symbol}
               </Badge>
+              {isConnected && tokenABalance && (
+                <span className="text-xs text-muted-foreground">
+                  Balance: {formatEther(tokenABalance)}
+                </span>
+              )}
             </div>
             <div className="text-sm">
               <div className="font-medium">
                 {battle.tokenA.totalStaked} {battle.tokenA.symbol}
               </div>
               <div className="text-xs text-muted-foreground">
-                {calculateDollarValue(battle.tokenA.totalStaked, battle.tokenA.symbol)}
+                {calculateDollarValue(
+                  battle.tokenA.totalStaked,
+                  battle.tokenA.symbol
+                )}
               </div>
             </div>
             <Progress
               value={75} // This could be the percentage of pool filled
               className="h-1"
             />
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={onJoinA}
-            >
-              Join {battle.tokenA.symbol}
-            </Button>
+            <div className="space-y-2">
+              {isConnected && userTokenAStake && (
+                <div className="text-xs text-muted-foreground">
+                  Your Stake: {formatEther(userTokenAStake)}{" "}
+                  {battle.tokenA.symbol}
+                </div>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={onJoinA}
+                // onClick={() => handleStakeTokenA(0.1)} // Example stake amount
+              >
+                Join {battle.tokenA.symbol}
+              </Button>
+            </div>
           </div>
 
           <div className="rounded-md border p-3 space-y-2">
@@ -117,27 +278,44 @@ export default function TokenVsTokenBattleCard({
               <Badge variant="outline" className="font-bold text-red-600">
                 {battle.tokenB.symbol}
               </Badge>
+              {isConnected && tokenBBalance && (
+                <span className="text-xs text-muted-foreground">
+                  Balance: {formatEther(tokenBBalance)}
+                </span>
+              )}
             </div>
             <div className="text-sm">
               <div className="font-medium">
                 {battle.tokenB.totalStaked} {battle.tokenB.symbol}
               </div>
               <div className="text-xs text-muted-foreground">
-                {calculateDollarValue(battle.tokenB.totalStaked, battle.tokenB.symbol)}
+                {calculateDollarValue(
+                  battle.tokenB.totalStaked,
+                  battle.tokenB.symbol
+                )}
               </div>
             </div>
             <Progress
               value={60} // This could be the percentage of pool filled
               className="h-1"
             />
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={onJoinB}
-            >
-              Join {battle.tokenB.symbol}
-            </Button>
+            <div className="space-y-2">
+              {isConnected && userTokenBStake && (
+                <div className="text-xs text-muted-foreground">
+                  Your Stake: {formatEther(userTokenBStake)}{" "}
+                  {battle.tokenB.symbol}
+                </div>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={onJoinB}
+                // onClick={() => handleStakeTokenB(0.1)} // Example stake amount
+              >
+                Join {battle.tokenB.symbol}
+              </Button>
+            </div>
           </div>
         </div>
 
