@@ -70,6 +70,38 @@ export function ActiveBattlesView() {
     },
   });
 
+  // Function to safely get token symbol with fallbacks
+  const getTokenSymbol = async (tokenAddress: Address): Promise<string> => {
+    try {
+      // First try to get the symbol
+      const symbol = (await readContract(readConfig, {
+        address: tokenAddress,
+        abi: extendedERC20ABI,
+        functionName: "symbol",
+      })) as string;
+
+      return symbol;
+    } catch (error) {
+      // Try name as fallback
+      try {
+        const name = (await readContract(readConfig, {
+          address: tokenAddress,
+          abi: extendedERC20ABI,
+          functionName: "name",
+        })) as string;
+
+        if (name && name.length > 0) {
+          return name.slice(0, 4).toUpperCase();
+        }
+      } catch (nameError) {
+        // Both symbol and name failed
+      }
+
+      // Last resort: use short address
+      return `${tokenAddress.slice(0, 4)}...${tokenAddress.slice(-4)}`;
+    }
+  };
+
   // Fetch battle details when we have battle addresses
   useEffect(() => {
     const fetchBattleDetails = async () => {
@@ -134,17 +166,9 @@ export function ActiveBattlesView() {
             })) as boolean;
 
             // Read token symbols
-            const tokenASymbol = (await readContract(readConfig, {
-              address: tokenAAddress,
-              abi: extendedERC20ABI,
-              functionName: "symbol",
-            })) as string;
+            const tokenASymbol = await getTokenSymbol(tokenAAddress);
 
-            const tokenBSymbol = (await readContract(readConfig, {
-              address: tokenBAddress,
-              abi: extendedERC20ABI,
-              functionName: "symbol",
-            })) as string;
+            const tokenBSymbol = await getTokenSymbol(tokenBAddress);
 
             // Calculate time left
             const endTime = Number(battleStartTime) + Number(battleDuration);
