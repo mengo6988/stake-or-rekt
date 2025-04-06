@@ -57,6 +57,13 @@ export const battleAbi = [
   },
   {
     type: "function",
+    name: "mockSwap",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "owner",
     inputs: [],
     outputs: [{ name: "", type: "address", internalType: "address" }],
