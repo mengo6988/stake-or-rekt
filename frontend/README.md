@@ -38,3 +38,21 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+
+
+## Deployed contracts
+##### Flow
+BattleFactory deployed at: 0x0703E63a29FF5DE0e43687c9332487Cea77B6DF9
+MockTokenA (SHIB) deployed at: 0xD73B242eF99056Aa0f7B971611769d9864b6e28a
+MockTokenB (DOGE) deployed at: 0xA7589FF6B731afBF8dA0D1d711cb460651DDb864
+MockTokenC (TRUMP) deployed at: 0x9ec2fA246A36dBD5390365ee100227815f6244BB
+MockTokenD (MELANIA) deployed at: 0x066543793bE208FE3089eb87cF5BB5d9dd76CaC4
+
+
+
+##### Base
+BattleFactory deployed at: 0x72a944362e1f46210FAA388DfAdECE871b852D5f
+MockTokenA (SHIB) deployed at: 0x0042292DA3B0b5b5fC16A24EF59d1DF49A06dad6
+MockTokenB (DOGE) deployed at: 0x31419671568E9840139eeF63D158F0cB08F9BBfC
+MockTokenC (TRUMP) deployed at: 0x119f9A45702c7df7318B6c5CabE13A15b571C9b3
+MockTokenD (MELANIA) deployed at: 0xB46b1fcE7A1AeFdaD1f87E119df83A35C2d6109E
