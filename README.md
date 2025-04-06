@@ -98,6 +98,13 @@ pnpm build
 - Authentication is handled by Privy
 - UI is built with Tailwind CSS and various components
 
+## Team
+Our team consist of 2 fairly new web3 developers from Malaysia who have experience in building gamefi and defi projects.
+#### Socials
+- X: @MadunProt0col @mengoo6988
+- Telegram: @amadzai @mengo6988
+
+
 ## License
 
 This project was built for a hackathon. License details to be added.
